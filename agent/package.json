@@ -1,18 +1,30 @@
 {
   "name": "browser-agent-server",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Vendor-neutral bridge: exposes the browser extension as JSON-RPC + MCP so any agent can drive it.",
+  "description": "Vendor-neutral bridge that exposes the browser-agent Chrome extension as JSON-RPC + MCP tools, so any agent can drive the browser.",
+  "keywords": ["mcp", "browser-automation", "ai-agent", "chrome-extension", "json-rpc"],
+  "homepage": "https://github.com/Godzilaa/browser-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godzilaa/browser-agent.git",
+    "directory": "agent"
+  },
   "bin": {
-    "browser-agent-mcp": "dist/mcp.js"
+    "browser-agent-server": "dist/mcp.js",
+    "browser-agent-bridge": "dist/server.js"
+  },
+  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "mcp": "node dist/mcp.js"
+    "mcp": "node dist/mcp.js",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

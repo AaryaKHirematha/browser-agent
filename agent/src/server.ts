@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Long-running server process. Hosts:
 //   • the WebSocket bridge the extension connects to        (ws://localhost:8777)
 //   • a JSON-RPC 2.0 endpoint any agent/language can call    (http://localhost:8778/rpc)
@@ -94,6 +95,16 @@ const server = http.createServer((req, res) => {
   }
 
   send(res, 404, { error: "not found" });
+});
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    // Another bridge already owns this port — defer to it and exit cleanly so
+    // an auto-spawn race (two MCP clients starting at once) doesn't crash.
+    console.error(`[rpc] http port ${HTTP_PORT} already in use; another bridge is running — exiting.`);
+    process.exit(0);
+  }
+  console.error("[rpc] http server error:", err.message);
 });
 
 server.listen(HTTP_PORT, () => {

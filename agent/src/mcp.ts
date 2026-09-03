@@ -1,26 +1,79 @@
+#!/usr/bin/env node
 // MCP wrapper (stdio). Exposes the same browser tools over the Model Context
 // Protocol so any MCP-capable agent (Claude Desktop/Code, Cursor, LangChain, …)
 // gets them with zero glue. Each tool call is forwarded to the JSON-RPC server,
 // which owns the extension bridge.
 //
-// Launch this from your MCP client config as: node <path>/dist/mcp.js
-// (the server.js process must be running too).
+// It auto-starts that bridge: if nothing is answering on the RPC port, this
+// wrapper spawns server.js as a detached background process and waits for it to
+// come up. So an end user only configures ONE thing — this command — and never
+// has to run a separate server. Launch from your MCP client config as:
+//     npx -y browser-agent-server        (or: node <path>/dist/mcp.js)
 
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { METHODS } from "./methods.js";
 
 const RPC_URL = process.env.RPC_URL ?? `http://localhost:${process.env.HTTP_PORT ?? 8778}/rpc`;
+const HEALTH_URL = RPC_URL.replace(/\/rpc\/?$/, "") + "/health";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function serverUp(): Promise<boolean> {
+  try {
+    const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(800) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+let ensured = false;
+
+/** Make sure the bridge server is running; start it if it isn't. */
+async function ensureServer(): Promise<void> {
+  if (ensured) return;
+  if (await serverUp()) {
+    ensured = true;
+    return;
+  }
+
+  // Start the bridge detached so it outlives this MCP client and can be reused
+  // by the next one (and so we don't fight the port on reconnect).
+  const serverPath = fileURLToPath(new URL("./server.js", import.meta.url));
+  const child = spawn(process.execPath, [serverPath], {
+    detached: true,
+    stdio: "ignore",
+    env: process.env,
+  });
+  child.on("error", () => {});
+  child.unref();
+
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    await sleep(250);
+    if (await serverUp()) {
+      ensured = true;
+      return;
+    }
+  }
+  // Stop waiting — if it's genuinely down (e.g. port taken by something else),
+  // the first tool call will surface a clear error instead of hanging here.
+  ensured = true;
+}
 
 let rpcId = 1;
 
 async function callRpc(method: string, params: Record<string, unknown>): Promise<unknown> {
+  await ensureServer();
   const res = await fetch(RPC_URL, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: rpcId++, method, params }),
   });
-  if (!res.ok) throw new Error(`RPC HTTP ${res.status} — is the server running? (npm start)`);
+  if (!res.ok) throw new Error(`RPC HTTP ${res.status} — bridge server unreachable at ${RPC_URL}`);
   const json = (await res.json()) as { result?: unknown; error?: { message: string } };
   if (json.error) throw new Error(json.error.message);
   return json.result;

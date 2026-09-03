@@ -1,0 +1,48 @@
+name: release
+
+# Tag a version to cut a release:  git tag v0.1.0 && git push --tags
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  extension:
+    name: Package extension + GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run package:ext
+      - name: Attach zip to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: browser-agent-extension.zip
+          generate_release_notes: true
+
+  npm:
+    name: Publish bridge to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+        working-directory: agent
+      - name: Publish (skips if NPM_TOKEN is not configured)
+        working-directory: agent
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN secret not set — skipping npm publish."
+            exit 0
+          fi
+          npm publish --access public

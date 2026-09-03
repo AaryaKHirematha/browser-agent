@@ -37,6 +37,9 @@ npm run build
 npm start          # bridge ws://localhost:8777 + JSON-RPC http://localhost:8778
 ```
 
+Running the server by hand is only needed for the JSON-RPC/HTTP clients below —
+MCP clients auto-start it (see [Connect an MCP client](#connect-an-mcp-client)).
+
 Then in Chrome, reload the extension (chrome://extensions → ↻) and reload a page.
 Check the wiring:
 
@@ -86,21 +89,36 @@ rpc("browser_type", index=box["index"], text="hello", pressEnter=True)
 
 ## Connect an MCP client
 
-`server.js` must be running (it owns the browser bridge). Point your MCP client at
-the stdio wrapper. Example config (Claude Desktop / Claude Code style):
+The MCP wrapper **auto-starts the bridge** — if nothing is listening on the RPC
+port it spawns `server.js` for you, so you don't need `npm start` in a second
+terminal. Point your MCP client at it. Published (recommended):
+
+```json
+{
+  "mcpServers": {
+    "browser-agent": {
+      "command": "npx",
+      "args": ["-y", "browser-agent-server"]
+    }
+  }
+}
+```
+
+From a local build, use the file directly instead:
 
 ```json
 {
   "mcpServers": {
     "browser-agent": {
       "command": "node",
-      "args": ["/home/godzilaa/browser-agent/agent/dist/mcp.js"]
+      "args": ["/absolute/path/browser-agent/agent/dist/mcp.js"]
     }
   }
 }
 ```
 
 The agent then sees `browser_get_state`, `browser_click`, etc. as native tools.
+(`browser_navigate`, `browser_highlight`, and `browser_clear_highlight` too.)
 
 ## Ports
 

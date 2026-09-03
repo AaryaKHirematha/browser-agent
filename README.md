@@ -48,29 +48,61 @@ browser-agent/
 
 ---
 
-## Setup
+## Install (prebuilt — for end users)
 
-### 1. Build & load the extension
+Two steps, no build tools.
+
+1. **Add the extension.** Download `browser-agent-extension.zip` from the
+   [latest release](https://github.com/Godzilaa/browser-agent/releases/latest),
+   unzip it, then in Chrome: `chrome://extensions` → enable **Developer mode** →
+   **Load unpacked** → select the unzipped folder.
+2. **Add the tool to your agent.** Drop this into your MCP client config:
+
+   ```json
+   {
+     "mcpServers": {
+       "browser-agent": {
+         "command": "npx",
+         "args": ["-y", "browser-agent-server"]
+       }
+     }
+   }
+   ```
+
+That's it — the MCP entry **auto-starts the bridge** the extension talks to, so
+there's no separate server to run.
+
+- **Claude Code:** `claude mcp add browser-agent -- npx -y browser-agent-server`
+- **Claude Desktop:** add the block to `claude_desktop_config.json`
+  (Settings → Developer → Edit Config), then restart the app.
+- **Cursor:** add the same block to `.cursor/mcp.json`.
+
+The agent now has `browser_get_state`, `browser_click`, `browser_type`, … as
+native tools. Open a normal `http`/`https` tab (not a `chrome://` page) and go.
+
+> **Not on npm yet?** Until the bridge is published, use the from-source build
+> below and point the MCP command at the local file instead:
+> `"command": "node", "args": ["/abs/path/browser-agent/agent/dist/mcp.js"]`.
+
+---
+
+## Build from source
 
 ```bash
-npm install
-npm run build          # → extension/dist/{content,background}.js   (npm run watch to rebuild)
+git clone https://github.com/Godzilaa/browser-agent
+cd browser-agent
+npm run setup          # installs + builds BOTH the extension and the bridge
 ```
 
-Then in Chrome: `chrome://extensions` → enable **Developer mode** →
-**Load unpacked** → select `browser-agent/extension`.
-
-### 2. Start the bridge server
+Load the extension (`chrome://extensions` → Developer mode → Load unpacked →
+`browser-agent/extension`). The MCP wrapper starts the bridge automatically; to
+run it by hand instead:
 
 ```bash
-cd agent
-npm install
-npm run build
-npm start              # WS bridge ws://localhost:8777  +  JSON-RPC http://localhost:8778
+cd agent && npm start   # WS bridge ws://localhost:8777 + JSON-RPC http://localhost:8778
 ```
 
-Start the server **before** loading the extension (or just reload the extension
-in `chrome://extensions` after starting it). Verify the wiring:
+Verify the wiring at any time:
 
 ```bash
 curl localhost:8778/health     # {"ok":true,"extensionConnected":true}
@@ -78,36 +110,31 @@ curl localhost:8778/methods    # the tool list
 ```
 
 If `extensionConnected` is `false`, reload the extension and refresh a normal
-`http`/`https` tab (the extension can't attach to `chrome://` pages).
+`http`/`https` tab.
+
+---
+
+## Publishing (maintainers)
+
+```bash
+# 1. Extension zip for a GitHub release
+npm run package:ext            # → browser-agent-extension.zip
+
+# 2. Bridge to npm (so `npx -y browser-agent-server` works for everyone)
+cd agent && npm publish --access public
+```
+
+Or just push a tag — `.github/workflows/release.yml` builds the extension zip,
+attaches it to a GitHub release, and (if the `NPM_TOKEN` repo secret is set)
+publishes the bridge to npm:
+
+```bash
+git tag v0.1.0 && git push --tags
+```
 
 ---
 
 ## Use it
-
-### From an MCP client (Claude Desktop / Claude Code / Cursor)
-
-Keep `agent` `npm start` running (it owns the browser bridge), then point your
-MCP client at the stdio wrapper:
-
-```json
-{
-  "mcpServers": {
-    "browser-agent": {
-      "command": "node",
-      "args": ["/home/godzilaa/browser-agent/agent/dist/mcp.js"]
-    }
-  }
-}
-```
-
-- **Claude Code:** `claude mcp add browser-agent -- node /home/godzilaa/browser-agent/agent/dist/mcp.js`
-- **Claude Desktop:** add the block above to `claude_desktop_config.json`
-  (Settings → Developer → Edit Config), then restart the app.
-- **Cursor:** add the same block to `.cursor/mcp.json`.
-
-The agent now sees `browser_get_state`, `browser_click`, `browser_type`, etc. as
-native tools. The MCP wrapper talks to `RPC_URL` (default
-`http://localhost:8778/rpc`) — set that env var if you changed the port.
 
 ### From any language (JSON-RPC)
 

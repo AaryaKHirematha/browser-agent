@@ -4,11 +4,18 @@
   "private": true,
   "description": "Chrome MV3 browser layer + agent for get_state()-driven web automation.",
   "license": "MIT",
+  "homepage": "https://github.com/Godzilaa/browser-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Godzilaa/browser-agent.git"
+  },
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
     "watch": "node build.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "package:ext": "node build.mjs && rm -f browser-agent-extension.zip && cd extension && zip -qr -FS ../browser-agent-extension.zip manifest.json dist -x '*.map' && cd ..",
+    "setup": "npm install && npm run build && npm --prefix agent install && npm --prefix agent run build"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",

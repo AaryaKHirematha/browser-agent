@@ -39,6 +39,14 @@ export class Bridge {
       ws.on("error", () => {});
     });
     this.wss.on("listening", () => console.error(`[bridge] listening on ws://localhost:${port}`));
+    this.wss.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        // Another bridge already owns this port — that's fine, defer to it.
+        console.error(`[bridge] ws port ${port} already in use; another bridge is running — exiting.`);
+        process.exit(0);
+      }
+      console.error("[bridge] websocket server error:", err.message);
+    });
   }
 
   get connected(): boolean {
