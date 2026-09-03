@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Chrome MV3 browser layer + agent for get_state()-driven web automation.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

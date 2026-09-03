@@ -2,6 +2,7 @@
   "name": "browser-agent-server",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Vendor-neutral bridge: exposes the browser extension as JSON-RPC + MCP so any agent can drive it.",
   "bin": {
