@@ -117,6 +117,25 @@ export const METHODS: Method[] = [
     toCommand: () => ({ type: "GET_UI_GRAPH" }),
   },
   {
+    name: "browser_dom_stats",
+    description:
+      "Return raw-DOM size metrics for the page — { htmlChars, nodes, innerTextChars } — read from the content script's isolated world, so it works even on strict-CSP pages where browser_eval is blocked. Useful as a raw-HTML observation baseline.",
+    shape: { tabId },
+    toCommand: () => ({ type: "DOM_STATS" }),
+  },
+  {
+    name: "browser_eval",
+    description:
+      "Evaluate a JavaScript expression in the page's MAIN world and return the JSON-serializable result. Runs in the page context, so it can read window globals set by the site (e.g. benchmark reward flags) and DOM properties the graph doesn't expose. Returns null for undefined; { __evalError } on a thrown error.",
+    shape: {
+      expression: z
+        .string()
+        .describe("A JS expression, e.g. \"document.title\" or \"WOB_REWARD_GLOBAL\"."),
+      tabId,
+    },
+    toCommand: (a) => ({ type: "EVAL", expression: a.expression }),
+  },
+  {
     name: "browser_highlight",
     description:
       "Draw numbered boxes over every indexed element (debug overlay). Refreshes the snapshot so indices match.",

@@ -109,6 +109,7 @@ export type Message =
     }
   | { type: "GET_UI_GRAPH" }
   | { type: "GRAPH_DELTA" }
+  | { type: "DOM_STATS" }
   | { type: "PING" };
 
 function handle(msg: Message): unknown {
@@ -150,6 +151,20 @@ function handle(msg: Message): unknown {
       return { ok: true, uiGraph: getUiGraph() };
     case "GRAPH_DELTA":
       return { ok: true, delta: getGraphDelta() };
+    case "DOM_STATS": {
+      // Raw-DOM size baseline, read from the isolated world — no eval, so it
+      // works on strict-CSP pages where MAIN-world eval is blocked.
+      const html = document.documentElement.outerHTML || "";
+      const text = (document.body?.innerText || "").length;
+      return {
+        ok: true,
+        stats: {
+          htmlChars: html.length,
+          nodes: document.getElementsByTagName("*").length,
+          innerTextChars: text,
+        },
+      };
+    }
     default:
       return { ok: false, error: `unknown message: ${(msg as { type: string }).type}` };
   }

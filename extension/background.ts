@@ -48,8 +48,11 @@ function waitForComplete(tabId: number, timeoutMs = 20000): Promise<void> {
   });
 }
 
-// A command is either a content-script Message or a background-handled one (NAVIGATE).
-type Command = Message | { type: "NAVIGATE"; url: string };
+// A command is either a content-script Message or a background-handled one.
+type Command =
+  | Message
+  | { type: "NAVIGATE"; url: string }
+  | { type: "EVAL"; expression: string };
 
 /** Execute a command against a tab (active tab if unspecified). */
 export async function runCommand(cmd: Command, tabId?: number): Promise<unknown> {
@@ -60,6 +63,25 @@ export async function runCommand(cmd: Command, tabId?: number): Promise<unknown>
     await waitForComplete(id);
     await ensureContentScript(id);
     return { ok: true, url: cmd.url };
+  }
+
+  if (cmd.type === "EVAL") {
+    // Run in the page's MAIN world so we can read site-set globals (e.g. a
+    // benchmark's reward) that the isolated content script can't see.
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: id },
+      world: "MAIN",
+      func: (expr: string) => {
+        try {
+          // eslint-disable-next-line no-eval
+          return (0, eval)(expr);
+        } catch (e) {
+          return { __evalError: String(e) };
+        }
+      },
+      args: [cmd.expression],
+    });
+    return res?.result ?? null;
   }
 
   await ensureContentScript(id);
@@ -82,6 +104,8 @@ export async function runCommand(cmd: Command, tabId?: number): Promise<unknown>
       return resp?.uiGraph ?? resp;
     case "GRAPH_DELTA":
       return resp?.delta ?? resp;
+    case "DOM_STATS":
+      return resp?.stats ?? resp;
     default:
       return resp;
   }

@@ -1,0 +1,138 @@
+{
+  "summary": {
+    "pages": 6,
+    "meanRawTokens": 25831,
+    "meanFlatTokens": 1342,
+    "meanGraphTokens": 1637,
+    "meanRawOverGraph": 51.6,
+    "meanRawOverFlat": 236.6
+  },
+  "pages": [
+    {
+      "url": "https://en.wikipedia.org/wiki/Web_scraping",
+      "domNodes": 1910,
+      "interactiveNodes": 388,
+      "graphNodes": 388,
+      "raw": {
+        "chars": 256623,
+        "tokens": 64156,
+        "ms": 59
+      },
+      "flat": {
+        "chars": 12100,
+        "tokens": 3025,
+        "ms": 90
+      },
+      "graph": {
+        "chars": 15042,
+        "tokens": 3761,
+        "ms": 86
+      }
+    },
+    {
+      "url": "https://news.ycombinator.com/",
+      "domNodes": 0,
+      "interactiveNodes": 227,
+      "graphNodes": 227,
+      "raw": {
+        "chars": 15,
+        "tokens": 4,
+        "ms": 13
+      },
+      "flat": {
+        "chars": 6253,
+        "tokens": 1563,
+        "ms": 57
+      },
+      "graph": {
+        "chars": 6724,
+        "tokens": 1681,
+        "ms": 49
+      }
+    },
+    {
+      "url": "https://github.com/trending",
+      "domNodes": 0,
+      "interactiveNodes": 187,
+      "graphNodes": 187,
+      "raw": {
+        "chars": 15,
+        "tokens": 4,
+        "ms": 12
+      },
+      "flat": {
+        "chars": 4283,
+        "tokens": 1071,
+        "ms": 110
+      },
+      "graph": {
+        "chars": 6461,
+        "tokens": 1615,
+        "ms": 167
+      }
+    },
+    {
+      "url": "https://www.bbc.com/news",
+      "domNodes": 1374,
+      "interactiveNodes": 113,
+      "graphNodes": 113,
+      "raw": {
+        "chars": 340707,
+        "tokens": 85177,
+        "ms": 54
+      },
+      "flat": {
+        "chars": 9248,
+        "tokens": 2312,
+        "ms": 40
+      },
+      "graph": {
+        "chars": 10616,
+        "tokens": 2654,
+        "ms": 55
+      }
+    },
+    {
+      "url": "https://www.demoblaze.com/",
+      "domNodes": 180,
+      "interactiveNodes": 15,
+      "graphNodes": 15,
+      "raw": {
+        "chars": 17359,
+        "tokens": 4340,
+        "ms": 8
+      },
+      "flat": {
+        "chars": 321,
+        "tokens": 80,
+        "ms": 16
+      },
+      "graph": {
+        "chars": 406,
+        "tokens": 102,
+        "ms": 64
+      }
+    },
+    {
+      "url": "https://stackoverflow.com/questions",
+      "domNodes": 16,
+      "interactiveNodes": 0,
+      "graphNodes": 0,
+      "raw": {
+        "chars": 5228,
+        "tokens": 1307,
+        "ms": 7
+      },
+      "flat": {
+        "chars": 0,
+        "tokens": 0,
+        "ms": 10
+      },
+      "graph": {
+        "chars": 23,
+        "tokens": 6,
+        "ms": 11
+      }
+    }
+  ]
+}

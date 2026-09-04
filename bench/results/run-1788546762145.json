@@ -1,0 +1,210 @@
+{
+  "model": "claude-opus-4-8",
+  "tasks": [
+    "click-test-2",
+    "click-button",
+    "focus-text",
+    "enter-text",
+    "click-link",
+    "click-dialog"
+  ],
+  "seeds": [
+    0
+  ],
+  "modes": [
+    "graph",
+    "flat"
+  ],
+  "aggregate": [
+    {
+      "mode": "graph",
+      "episodes": 6,
+      "successRate": 0,
+      "avgSteps": 0,
+      "avgObsChars": 0,
+      "avgPromptTokens": 0,
+      "avgOutputTokens": 0,
+      "avgMs": 0
+    },
+    {
+      "mode": "flat",
+      "episodes": 6,
+      "successRate": 0,
+      "avgSteps": 0,
+      "avgObsChars": 0,
+      "avgPromptTokens": 0,
+      "avgOutputTokens": 0,
+      "avgMs": 0
+    }
+  ],
+  "episodes": [
+    {
+      "task": "click-test-2",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-button",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "focus-text",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "enter-text",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-link",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-dialog",
+      "seed": 0,
+      "mode": "graph",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-test-2",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-button",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "focus-text",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "enter-text",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-link",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    },
+    {
+      "task": "click-dialog",
+      "seed": 0,
+      "mode": "flat",
+      "model": "claude-opus-4-8",
+      "success": false,
+      "error": "Error: rate_limit_error: Error",
+      "steps": 0,
+      "promptTokens": 0,
+      "outputTokens": 0,
+      "observeCalls": 0,
+      "avgObsChars": 0,
+      "ms": 0
+    }
+  ]
+}

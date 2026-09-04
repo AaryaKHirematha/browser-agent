@@ -1,12 +1,19 @@
 # browser-agent
 
-Turn any webpage into structured JSON and let **any** agent act on it.
+A Chrome (Manifest V3) extension that lets **any** agent read and act on the
+page **in your real, logged-in browser** — exposed over **MCP** and **JSON-RPC**
+so Claude, Cursor, LangChain, or plain `curl` all drive the same tab. It ships
+with two things most agents in this space skip: a **semantic UI-graph**
+observation layer (kept live by a MutationObserver) and a **benchmark harness**
+that measures what it costs to feed a page to an LLM.
 
-A Chrome (Manifest V3) extension reads the page — every visible interactive
-element, each with a stable `index` — and performs actions (click, type, scroll,
-navigate). A small vendor-neutral bridge exposes those as **JSON-RPC** and
-**MCP** tools, so Claude, Cursor, LangChain, or a plain `curl` can all drive the
-same browser.
+> **Honest positioning.** This is a well-trodden category — see
+> [Prior art](#prior-art--where-this-sits). It is not novel technology; it's a
+> clean, measured implementation and a small study. If you want a production
+> agent, look at [browser-use](https://github.com/browser-use/browser-use) or
+> [real-browser-mcp](https://github.com/ofershap/real-browser-mcp). If you want
+> to understand *how observation representation affects cost*, read the
+> [benchmark writeup](docs/observation-benchmark.md).
 
 ```
    any agent
@@ -14,16 +21,16 @@ same browser.
    └── speaks HTTP ─▶ /rpc ────────────┤
                                        ▼
                             server.js  (JSON-RPC :8778  +  WS bridge :8777)
-                                       │  WebSocket
+                                       │  WebSocket (localhost only)
                                        ▼
                         Chrome extension (background service worker)
-                                       │  chrome.tabs.sendMessage
+                                       │  chrome.tabs.sendMessage / chrome.scripting
                                        ▼
-                             content script → get_state() / actions → the page
+             content script → get_state() · UI graph · actions → the page
 ```
 
-The extension **dials into** the bridge (an extension can't accept connections),
-so the flow is: start the server → load/reload the extension → drive it.
+The extension **dials into** the bridge (an extension can't accept
+connections): start the server → load/reload the extension → drive it.
 
 ---
 
@@ -31,186 +38,116 @@ so the flow is: start the server → load/reload the extension → drive it.
 
 ```
 browser-agent/
-├── extension/                 # Phase 1 — the browser layer (MV3 + TypeScript)
+├── extension/                 # the browser layer (MV3 + TypeScript)
 │   ├── manifest.json
 │   ├── content.ts             # message router + index→element registry
-│   ├── background.ts          # service worker; relays commands, dials WS bridge
-│   ├── state/                 # get_state(): dom / geometry / visibility / types
+│   ├── background.ts          # service worker; relays commands, dials WS bridge, MAIN-world eval
+│   ├── state/                 # get_state(): dom / geometry / visibility / semantic / types
+│   ├── graph/                 # semantic UI graph: types / graph / observer / engine / project
 │   └── actions/               # click / type / scroll / highlight
-├── agent/                     # Phase 2 — the bridge (JSON-RPC + MCP over one WS)
-│   ├── src/methods.ts         # single source of truth for the tool list
-│   ├── src/server.ts          # WS bridge + JSON-RPC HTTP endpoint
-│   ├── src/bridge.ts          # extension <-> server plumbing
-│   └── src/mcp.ts             # stdio MCP wrapper → forwards to /rpc
-├── build.mjs                  # bundles the extension into extension/dist/
-└── README.md
+├── agent/                     # the bridge (JSON-RPC + MCP over one WS)
+│   └── src/{methods,server,bridge,mcp}.ts
+├── bench/                     # benchmark harness (see docs/observation-benchmark.md)
+│   ├── obsbench.mjs           # observation-size comparison (raw HTML vs flat vs graph)
+│   ├── run.mjs / loop.mjs     # MiniWoB++ agent runner, observation-mode ablation
+│   └── lib/                   # creds / llm / bridge / miniwob
+├── build.mjs
+└── docs/observation-benchmark.md
 ```
 
 ---
 
-## Install (prebuilt — for end users)
-
-Two steps, no build tools.
+## Install (prebuilt)
 
 1. **Add the extension.** Download `browser-agent-extension.zip` from the
    [latest release](https://github.com/Godzilaa/browser-agent/releases/latest),
-   unzip it, then in Chrome: `chrome://extensions` → enable **Developer mode** →
-   **Load unpacked** → select the unzipped folder.
-2. **Add the tool to your agent.** Drop this into your MCP client config:
-
+   unzip, then `chrome://extensions` → **Developer mode** → **Load unpacked** →
+   pick the folder.
+2. **Point your agent at it** via MCP:
    ```json
-   {
-     "mcpServers": {
-       "browser-agent": {
-         "command": "npx",
-         "args": ["-y", "browser-agent-server"]
-       }
-     }
-   }
+   { "mcpServers": { "browser-agent": { "command": "npx", "args": ["-y", "browser-agent-server"] } } }
    ```
+   - **Claude Code:** `claude mcp add browser-agent -- npx -y browser-agent-server`
+   - **Claude Desktop / Cursor:** add the block to the client's MCP config.
 
-That's it — the MCP entry **auto-starts the bridge** the extension talks to, so
-there's no separate server to run.
+Open a normal `http`/`https` tab (not `chrome://`) and go.
 
-- **Claude Code:** `claude mcp add browser-agent -- npx -y browser-agent-server`
-- **Claude Desktop:** add the block to `claude_desktop_config.json`
-  (Settings → Developer → Edit Config), then restart the app.
-- **Cursor:** add the same block to `.cursor/mcp.json`.
-
-The agent now has `browser_get_state`, `browser_click`, `browser_type`, … as
-native tools. Open a normal `http`/`https` tab (not a `chrome://` page) and go.
-
-> **Not on npm yet?** Until the bridge is published, use the from-source build
-> below and point the MCP command at the local file instead:
-> `"command": "node", "args": ["/abs/path/browser-agent/agent/dist/mcp.js"]`.
-
----
+> **Not on npm yet.** Use the from-source build below and point the MCP command
+> at the local file: `"command": "node", "args": ["/abs/path/agent/dist/mcp.js"]`.
 
 ## Build from source
 
 ```bash
-git clone https://github.com/Godzilaa/browser-agent
-cd browser-agent
-npm run setup          # installs + builds BOTH the extension and the bridge
+git clone https://github.com/Godzilaa/browser-agent && cd browser-agent
+npm run setup            # installs + builds the extension AND the bridge
+cd agent && npm start    # WS bridge :8777 + JSON-RPC :8778 (or let the MCP wrapper auto-start it)
 ```
-
-Load the extension (`chrome://extensions` → Developer mode → Load unpacked →
-`browser-agent/extension`). The MCP wrapper starts the bridge automatically; to
-run it by hand instead:
-
-```bash
-cd agent && npm start   # WS bridge ws://localhost:8777 + JSON-RPC http://localhost:8778
-```
-
-Verify the wiring at any time:
-
-```bash
-curl localhost:8778/health     # {"ok":true,"extensionConnected":true}
-curl localhost:8778/methods    # the tool list
-```
-
-If `extensionConnected` is `false`, reload the extension and refresh a normal
-`http`/`https` tab.
-
----
-
-## Publishing (maintainers)
-
-```bash
-# 1. Extension zip for a GitHub release
-npm run package:ext            # → browser-agent-extension.zip
-
-# 2. Bridge to npm (so `npx -y browser-agent-server` works for everyone)
-cd agent && npm publish --access public
-```
-
-Or just push a tag — `.github/workflows/release.yml` builds the extension zip,
-attaches it to a GitHub release, and (if the `NPM_TOKEN` repo secret is set)
-publishes the bridge to npm:
-
-```bash
-git tag v0.1.0 && git push --tags
-```
-
----
-
-## Use it
-
-### From any language (JSON-RPC)
-
-```bash
-# read the page
-curl -s -X POST localhost:8778/rpc -H 'content-type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"browser_get_state","params":{}}'
-
-# type into element 4 and submit
-curl -s -X POST localhost:8778/rpc -H 'content-type: application/json' \
-  -d '{"jsonrpc":"2.0","id":2,"method":"browser_type","params":{"index":4,"text":"hello","pressEnter":true}}'
-```
-
-```python
-import requests
-def rpc(method, **params):
-    r = requests.post("http://localhost:8778/rpc",
-        json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params})
-    return r.json()["result"]
-
-state = rpc("browser_get_state")
-box = next(e for e in state["elements"] if e["editable"])
-rpc("browser_type", index=box["index"], text="hello", pressEnter=True)
-```
+Load `extension/` unpacked. Verify: `curl localhost:8778/health` →
+`{"ok":true,"extensionConnected":true}`.
 
 ---
 
 ## Tools
 
-Every tool accepts an optional `tabId` (defaults to the active tab).
+Every tool takes an optional `tabId` (defaults to the active tab).
 
-| Tool                      | Params                                     | Effect                                    |
-| ------------------------- | ------------------------------------------ | ----------------------------------------- |
-| `browser_get_state`       | —                                          | Page → JSON (url, title, viewport, elements) |
-| `browser_click`           | `index`                                    | Click element `index`                     |
-| `browser_type`            | `index`, `text`, `clear?`, `pressEnter?`   | Type into an editable element             |
-| `browser_scroll`          | `direction?`, `amount?`                    | Scroll up / down / top / bottom           |
-| `browser_scroll_to`       | `index`                                    | Scroll element into view                  |
-| `browser_navigate`        | `url`                                      | Navigate the tab, wait for load           |
-| `browser_highlight`       | —                                          | Draw numbered boxes over indexed elements |
-| `browser_clear_highlight` | —                                          | Remove the overlay                        |
+| Tool | Params | Effect |
+| --- | --- | --- |
+| `browser_get_state` | — | Page → JSON: flat list of visible interactive elements, each with an `index` |
+| `browser_get_graph` | `query?`, `roles?`, `maxNodes?` | Page → **semantic UI tree** (task-conditioned projection), interactive nodes tagged `[#index]` |
+| `browser_graph_delta` | — | Mutations since last call (NODE_ADDED/REMOVED/CHANGED, EDGE_ADDED/REMOVED) |
+| `browser_ui_graph` | — | Full raw semantic graph (nodes + semantic edges) |
+| `browser_click` | `index` | Click element `index` |
+| `browser_type` | `index`, `text`, `clear?`, `pressEnter?` | Type into an editable element |
+| `browser_scroll` / `browser_scroll_to` | `direction?` / `index` | Scroll page / element into view |
+| `browser_navigate` | `url` | Navigate the tab, wait for load |
+| `browser_eval` | `expression` | Eval a JS expression in the page's MAIN world (reads site globals; blocked by strict CSP) |
+| `browser_dom_stats` | — | Raw-DOM size metrics from the isolated world (CSP-immune) |
+| `browser_highlight` / `browser_clear_highlight` | — | Debug overlay of indexed elements |
 
-`index` values come from the most recent `browser_get_state`. After the page
-changes, call `browser_get_state` again — actions on a stale/detached element
-return an error telling you to re-read.
+`index` values come from the most recent `get_state`/`get_graph`. After the page
+changes, read again — actions on a stale/detached element error out.
 
-### What `get_state()` returns
+## Observation layers
 
-```jsonc
-{
-  "url": "...", "title": "...", "timestamp": 0,
-  "viewport": { "width": 0, "height": 0, "scrollX": 0, "scrollY": 0, "devicePixelRatio": 1 },
-  "scroll":   { "atTop": true, "atBottom": false, "maxScrollY": 0 },
-  "elements": [
-    { "index": 0, "tag": "button", "role": "button", "text": "Submit",
-      "editable": false, "disabled": false, "inViewport": true,
-      "rect": { "x": 0, "y": 0, "width": 0, "height": 0 },
-      "center": { "x": 0, "y": 0 }, "xpath": "...", "attributes": { } }
-  ]
-}
-```
+- **`get_state`** — a flat list of visible interactive elements (native controls,
+  ARIA widgets, `contenteditable`), piercing open shadow DOM.
+- **`get_graph`** — a **semantic UI graph** built once and kept live by a
+  MutationObserver (`extension/graph/`). Interactive elements + landmark/heading
+  containers collapse the raw DOM into a small tree; `project()` filters it to
+  the task (`query`) and hands out `[#index]` action handles.
+- **`graph_delta`** — Layer 2: what *changed* since your last read, instead of
+  re-serializing the whole page.
 
-Visible interactive elements only — native controls, ARIA widgets, and
-`contenteditable`, piercing open shadow DOM.
+See [docs/observation-benchmark.md](docs/observation-benchmark.md) for how these
+compare on real pages (spoiler: semantic ≫ raw HTML on tokens; graph ≈ flat).
 
 ---
 
-## Ports
+## Prior art & where this sits
 
-`BRIDGE_PORT` (default `8777`, extension ↔ server) and `HTTP_PORT` (default
-`8778`, JSON-RPC). The MCP wrapper reads `RPC_URL` (default
-`http://localhost:8778/rpc`). Override via environment variables if they clash.
+The idea — feed an LLM a distilled, indexed view of the page and let it act, in
+the user's real browser, over MCP — is **not new**. Closely overlapping projects:
 
-## Develop
+- **[browser-use](https://github.com/browser-use/browser-use)** — the default
+  open-source web-agent framework (100k★, WebVoyager SOTA).
+- **[real-browser-mcp](https://github.com/ofershap/real-browser-mcp)**,
+  **[BrowserMCP](https://github.com/Smotree/BrowserMCP)**,
+  **[browser-control-mcp](https://github.com/eyalzh/browser-control-mcp)** —
+  MCP + extension driving your real, logged-in browser over localhost WebSocket
+  (same architecture as this repo).
+- **Agent-Browser (Vercel), Agent-E, Notte** — token-efficient
+  "distilled DOM / snapshot+refs" observations (same idea as the graph/flat view).
+- Incremental-observation research (Region4Web, Signal-Driven Observation)
+  covers the `graph_delta` concept.
 
-```bash
-npm run watch          # rebuild the extension on change
-cd agent && npm run dev   # server with reload (tsx watch)
-```
+What this repo offers that many of the above don't: an in-repo **benchmark
+harness** and an honest **measurement** of the representation tradeoff.
+
+---
+
+## Ports & develop
+
+`BRIDGE_PORT` (8777, extension ↔ server), `HTTP_PORT` (8778, JSON-RPC); MCP
+wrapper reads `RPC_URL`. `npm run watch` (extension), `cd agent && npm run dev`
+(server with reload).

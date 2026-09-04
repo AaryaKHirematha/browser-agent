@@ -1,0 +1,138 @@
+{
+  "summary": {
+    "pages": 6,
+    "meanRawTokens": 26685,
+    "meanFlatTokens": 1806,
+    "meanGraphTokens": 2248,
+    "meanRawOverGraph": 25.7,
+    "meanRawOverFlat": 32
+  },
+  "pages": [
+    {
+      "url": "https://en.wikipedia.org/wiki/Web_scraping",
+      "domNodes": 1910,
+      "interactiveNodes": 388,
+      "graphNodes": 388,
+      "raw": {
+        "chars": 256623,
+        "tokens": 64156,
+        "ms": 61
+      },
+      "flat": {
+        "chars": 12100,
+        "tokens": 3025,
+        "ms": 93
+      },
+      "graph": {
+        "chars": 15042,
+        "tokens": 3761,
+        "ms": 86
+      }
+    },
+    {
+      "url": "https://news.ycombinator.com/",
+      "domNodes": 0,
+      "interactiveNodes": 227,
+      "graphNodes": 227,
+      "raw": {
+        "chars": 15,
+        "tokens": 4,
+        "ms": 9
+      },
+      "flat": {
+        "chars": 6253,
+        "tokens": 1563,
+        "ms": 57
+      },
+      "graph": {
+        "chars": 6724,
+        "tokens": 1681,
+        "ms": 45
+      }
+    },
+    {
+      "url": "https://github.com/trending",
+      "domNodes": 0,
+      "interactiveNodes": 187,
+      "graphNodes": 187,
+      "raw": {
+        "chars": 15,
+        "tokens": 4,
+        "ms": 9
+      },
+      "flat": {
+        "chars": 4283,
+        "tokens": 1071,
+        "ms": 121
+      },
+      "graph": {
+        "chars": 6461,
+        "tokens": 1615,
+        "ms": 176
+      }
+    },
+    {
+      "url": "https://www.bbc.com/news",
+      "domNodes": 1374,
+      "interactiveNodes": 113,
+      "graphNodes": 113,
+      "raw": {
+        "chars": 340873,
+        "tokens": 85218,
+        "ms": 59
+      },
+      "flat": {
+        "chars": 9226,
+        "tokens": 2307,
+        "ms": 38
+      },
+      "graph": {
+        "chars": 10594,
+        "tokens": 2649,
+        "ms": 49
+      }
+    },
+    {
+      "url": "https://www.demoblaze.com/",
+      "domNodes": 378,
+      "interactiveNodes": 15,
+      "graphNodes": 15,
+      "raw": {
+        "chars": 42896,
+        "tokens": 10724,
+        "ms": 12
+      },
+      "flat": {
+        "chars": 321,
+        "tokens": 80,
+        "ms": 22
+      },
+      "graph": {
+        "chars": 406,
+        "tokens": 102,
+        "ms": 27
+      }
+    },
+    {
+      "url": "https://developer.mozilla.org/en-US/docs/Web/HTML",
+      "domNodes": 0,
+      "interactiveNodes": 411,
+      "graphNodes": 411,
+      "raw": {
+        "chars": 15,
+        "tokens": 4,
+        "ms": 8
+      },
+      "flat": {
+        "chars": 11165,
+        "tokens": 2791,
+        "ms": 144
+      },
+      "graph": {
+        "chars": 14725,
+        "tokens": 3681,
+        "ms": 110
+      }
+    }
+  ]
+}
