@@ -64,17 +64,27 @@ export async function runCommand(cmd: Command, tabId?: number): Promise<unknown>
 
   await ensureContentScript(id);
   const resp = (await chrome.tabs.sendMessage(id, cmd, { frameId: 0 })) as
-    | { ok?: boolean; error?: string; state?: unknown }
+    | { ok?: boolean; error?: string; [key: string]: unknown }
     | undefined;
 
   // Surface content-script failures (e.g. detached element) as real errors so
   // the RPC/MCP layer reports them as errors, not successful results.
   if (resp && resp.ok === false) {
-    throw new Error(resp.error ?? "command failed");
+    throw new Error((resp.error as string) ?? "command failed");
   }
-  // Unwrap get_state so the result IS the page state (no { ok, state } nesting).
-  if (cmd.type === "GET_STATE") return resp?.state ?? resp;
-  return resp;
+  // Unwrap payloads so the result IS the data (no { ok, ... } nesting).
+  switch (cmd.type) {
+    case "GET_STATE":
+      return resp?.state ?? resp;
+    case "GET_GRAPH":
+      return resp?.graph ?? resp;
+    case "GET_UI_GRAPH":
+      return resp?.uiGraph ?? resp;
+    case "GRAPH_DELTA":
+      return resp?.delta ?? resp;
+    default:
+      return resp;
+  }
 }
 
 // ---- WebSocket bridge client ------------------------------------------------

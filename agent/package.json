@@ -4,7 +4,13 @@
   "license": "MIT",
   "type": "module",
   "description": "Vendor-neutral bridge that exposes the browser-agent Chrome extension as JSON-RPC + MCP tools, so any agent can drive the browser.",
-  "keywords": ["mcp", "browser-automation", "ai-agent", "chrome-extension", "json-rpc"],
+  "keywords": [
+    "mcp",
+    "browser-automation",
+    "ai-agent",
+    "chrome-extension",
+    "json-rpc"
+  ],
   "homepage": "https://github.com/Godzilaa/browser-agent#readme",
   "repository": {
     "type": "git",
@@ -15,7 +21,10 @@
     "browser-agent-server": "dist/mcp.js",
     "browser-agent-bridge": "dist/server.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "engines": {
     "node": ">=18"
   },

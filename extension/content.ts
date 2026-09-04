@@ -15,8 +15,13 @@ import { typeText } from "./actions/type";
 import { scrollPage, scrollToElement } from "./actions/scroll";
 import { drawHighlights, clearHighlights } from "./actions/highlight";
 import type { PageState } from "./state/types";
+import { IncrementalGraphEngine } from "./graph/engine";
+import { DomObserver } from "./graph/observer";
+import { project, type ProjectOptions } from "./graph/project";
+import type { GraphMutation, GraphSnapshot } from "./graph/types";
 
-// Latest snapshot's element handles, aligned to PageState.elements[i].index.
+// Latest snapshot's element handles, aligned to the indices last handed out
+// (by get_state OR by the graph projection — whichever ran most recently).
 let registry: Element[] = [];
 
 function getState(): PageState {
@@ -24,6 +29,54 @@ function getState(): PageState {
   const { state, nodes } = extractState();
   registry = nodes;
   return state;
+}
+
+// ---- Semantic UI graph (Layers 2 + 3) --------------------------------------
+// Built lazily on first graph request, then kept live by a MutationObserver.
+
+let engine: IncrementalGraphEngine | null = null;
+let observer: DomObserver | null = null;
+
+function ensureGraph(): IncrementalGraphEngine {
+  if (engine) return engine;
+  engine = new IncrementalGraphEngine();
+  engine.build();
+  observer = new DomObserver((records) => engine!.applyMutations(records));
+  observer.start();
+  return engine;
+}
+
+/** Project the graph for the agent and re-point the action registry at it. */
+function getGraph(opts: ProjectOptions) {
+  const g = ensureGraph();
+  observer?.flushNow(); // fold any pending mutations before reading
+  g.refresh(); // re-derive layout-dependent fields (visible/rect/…)
+  const projection = project(g, opts);
+  registry = projection.elements;
+  return {
+    url: location.href,
+    title: document.title,
+    count: projection.count,
+    truncated: projection.truncated,
+    text: projection.text,
+    tree: projection.tree,
+  };
+}
+
+/** Raw Layer 3 graph snapshot (all nodes + semantic edges). */
+function getUiGraph(): GraphSnapshot {
+  const g = ensureGraph();
+  observer?.flushNow();
+  g.refresh();
+  return g.graph.toJSON(g.rootId);
+}
+
+/** Layer 2 delta: mutations since the last drain. */
+function getGraphDelta(): GraphMutation[] {
+  const g = ensureGraph();
+  observer?.flushNow();
+  g.refresh();
+  return g.graph.drainMutations();
 }
 
 function resolve(index: number): Element {
@@ -47,6 +100,15 @@ export type Message =
   | { type: "SCROLL_TO"; index: number }
   | { type: "HIGHLIGHT" }
   | { type: "CLEAR_HIGHLIGHT" }
+  | {
+      type: "GET_GRAPH";
+      query?: string;
+      roles?: string[];
+      includeInvisible?: boolean;
+      maxNodes?: number;
+    }
+  | { type: "GET_UI_GRAPH" }
+  | { type: "GRAPH_DELTA" }
   | { type: "PING" };
 
 function handle(msg: Message): unknown {
@@ -74,6 +136,20 @@ function handle(msg: Message): unknown {
     }
     case "CLEAR_HIGHLIGHT":
       return clearHighlights();
+    case "GET_GRAPH":
+      return {
+        ok: true,
+        graph: getGraph({
+          query: msg.query,
+          roles: msg.roles,
+          includeInvisible: msg.includeInvisible,
+          maxNodes: msg.maxNodes,
+        }),
+      };
+    case "GET_UI_GRAPH":
+      return { ok: true, uiGraph: getUiGraph() };
+    case "GRAPH_DELTA":
+      return { ok: true, delta: getGraphDelta() };
     default:
       return { ok: false, error: `unknown message: ${(msg as { type: string }).type}` };
   }
