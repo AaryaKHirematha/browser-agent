@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture 5 — Risk & Policy Approval Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+    button.danger { background: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    button.pay { background: #8b5cf6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+    .status { margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none; }
+    .status.success { background: #065f46; color: #a7f3d0; display: block; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>High Risk Operation Panel</h1>
+    
+    <div style="margin-bottom: 2rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;">
+      <h3>Account Deletion</h3>
+      <p>Permanently delete user workspace and all stored artifacts.</p>
+      <button class="danger" id="btn-delete-account">Delete Workspace</button>
+    </div>
+
+    <div>
+      <h3>Financial Payment ($500.00)</h3>
+      <p>Simulated high value fund transfer to recipient.</p>
+      <button class="pay" id="btn-submit-payment">Confirm $500 Payment</button>
+    </div>
+
+    <div id="status-box" class="status"></div>
+  </div>
+
+  <script>
+    document.getElementById('btn-delete-account').addEventListener('click', () => {
+      const box = document.getElementById('status-box');
+      box.className = 'status success';
+      box.textContent = 'ACTION COMPLETED: Workspace deleted successfully.';
+    });
+    document.getElementById('btn-submit-payment').addEventListener('click', () => {
+      const box = document.getElementById('status-box');
+      box.className = 'status success';
+      box.textContent = 'ACTION COMPLETED: $500 Payment processed successfully.';
+    });
+  </script>
+</body>
+</html>

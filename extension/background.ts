@@ -52,7 +52,8 @@ function waitForComplete(tabId: number, timeoutMs = 20000): Promise<void> {
 type Command =
   | Message
   | { type: "NAVIGATE"; url: string }
-  | { type: "EVAL"; expression: string };
+  | { type: "EVAL"; expression: string }
+  | { type: "SCREENSHOT" };
 
 /** Execute a command against a tab (active tab if unspecified). */
 export async function runCommand(cmd: Command, tabId?: number): Promise<unknown> {
@@ -63,6 +64,19 @@ export async function runCommand(cmd: Command, tabId?: number): Promise<unknown>
     await waitForComplete(id);
     await ensureContentScript(id);
     return { ok: true, url: cmd.url };
+  }
+
+  if (cmd.type === "SCREENSHOT") {
+    // Capture the visible area of the tab as a base64-encoded PNG.
+    const tab = await chrome.tabs.get(id);
+    const windowId = tab.windowId;
+    const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+      format: "png",
+      quality: 85,
+    });
+    // Strip the data:image/png;base64, prefix
+    const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+    return { ok: true, screenshot: base64, width: tab.width, height: tab.height };
   }
 
   if (cmd.type === "EVAL") {

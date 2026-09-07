@@ -14,7 +14,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { METHODS } from "./methods.js";
+import { METHODS, SERVER_METHODS } from "./methods.js";
 
 const RPC_URL = process.env.RPC_URL ?? `http://localhost:${process.env.HTTP_PORT ?? 8778}/rpc`;
 const HEALTH_URL = RPC_URL.replace(/\/rpc\/?$/, "") + "/health";
@@ -79,9 +79,13 @@ async function callRpc(method: string, params: Record<string, unknown>): Promise
   return json.result;
 }
 
-const server = new McpServer({ name: "browser-agent", version: "0.1.0" });
+const server = new McpServer({ name: "browser-agent", version: "0.2.0" });
 
-for (const method of METHODS) {
+// Register all tools — both bridge-forwarded and server-side intelligence tools.
+// The JSON-RPC server handles routing internally.
+const ALL_TOOLS = [...METHODS, ...SERVER_METHODS];
+
+for (const method of ALL_TOOLS) {
   server.registerTool(
     method.name,
     { description: method.description, inputSchema: method.shape },
@@ -103,4 +107,4 @@ for (const method of METHODS) {
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error("[mcp] browser-agent MCP server ready (stdio)");
+console.error("[mcp] browser-agent MCP server ready (stdio) — Trustworthy Autonomous Browser Agent v0.2.0");

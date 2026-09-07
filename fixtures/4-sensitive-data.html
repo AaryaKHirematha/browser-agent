@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture 4 — Sensitive Data Privacy Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+    .field { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.25rem; font-weight: 500; }
+    input { width: 100%; padding: 0.5rem; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #fff; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Account Profile Details</h1>
+    <div class="field">
+      <label>Email Address:</label>
+      <p id="user-email">john.doe.privacy@test-domain.org</p>
+    </div>
+    <div class="field">
+      <label>Social Security Number (SSN):</label>
+      <p id="user-ssn">987-65-4321</p>
+    </div>
+    <div class="field">
+      <label>Credit Card Number:</label>
+      <p id="user-cc">4532-8901-2345-6789</p>
+    </div>
+    <div class="field">
+      <label>API Live Secret Key:</label>
+      <p id="user-apikey">sk_live_99887766554433221100abc</p>
+    </div>
+    <div class="field">
+      <label>Password Field:</label>
+      <input type="password" id="pass-field" value="SuperSecretP@ssword2026" />
+    </div>
+  </div>
+</body>
+</html>

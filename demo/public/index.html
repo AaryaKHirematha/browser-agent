@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demo - Search Products</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+  .product { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+</style>
+</head>
+<body>
+  <h1>Search Products</h1>
+  <nav>
+    <a href="index.html">Home</a> | 
+    <a href="sensitive.html">Profile (Sensitive)</a> | 
+    <a href="high-risk.html">Settings (High Risk)</a> | 
+    <a href="dynamic.html">Dynamic DOM</a> | 
+    <a href="prompt-injection.html">Comments</a>
+  </nav>
+  <hr>
+  
+  <div>
+    <input type="text" id="search-box" placeholder="Enter product name...">
+    <input type="number" id="max-price" placeholder="Max price">
+    <button id="search-btn">Search</button>
+  </div>
+  
+  <div id="results"></div>
+
+  <script>
+    const products = [
+      { name: 'Quantum Computer', price: 5000 },
+      { name: 'Mechanical Keyboard', price: 150 },
+      { name: 'Wireless Mouse', price: 45 },
+      { name: 'USB-C Cable', price: 15 }
+    ];
+
+    document.getElementById('search-btn').addEventListener('click', () => {
+      const q = document.getElementById('search-box').value.toLowerCase();
+      const max = parseFloat(document.getElementById('max-price').value) || Infinity;
+      
+      const filtered = products.filter(p => p.name.toLowerCase().includes(q) && p.price <= max);
+      const resDiv = document.getElementById('results');
+      resDiv.innerHTML = '';
+      
+      filtered.forEach((p, idx) => {
+        const d = document.createElement('div');
+        d.className = 'product';
+        d.innerHTML = `<h3>${p.name}</h3><p>Price: $${p.price}</p><button id="buy-btn-${idx}">Buy Now</button>`;
+        resDiv.appendChild(d);
+      });
+      
+      if(filtered.length === 0) {
+        resDiv.innerHTML = '<p id="no-results">No results found.</p>';
+      }
+    });
+  </script>
+</body>
+</html>

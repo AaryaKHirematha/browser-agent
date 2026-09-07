@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture 2 — Dynamic DOM Application</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+    button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #10b981; color: white; cursor: pointer; margin-right: 0.5rem; }
+    .stale-target { background: #f59e0b; padding: 0.75rem; border-radius: 4px; margin-top: 1rem; color: #000; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Dynamic DOM Test</h1>
+    <p>Clicking trigger causes target elements to mutate, detach, and re-render with new IDs.</p>
+    <button id="trigger-mutate">Mutate DOM Nodes</button>
+    <div id="container">
+      <div class="stale-target" id="node-v1" data-role="submit-action">
+        <span>Target Action Node (Original ID: node-v1)</span>
+        <button id="btn-submit-orig">Submit Order</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('trigger-mutate').addEventListener('click', () => {
+      const container = document.getElementById('container');
+      // Completely replace inner HTML to detach node-v1 and create stale element references
+      setTimeout(() => {
+        container.innerHTML = `
+          <div class="stale-target" id="node-v2-mutated" data-role="submit-action">
+            <span>Target Action Node (Re-rendered ID: node-v2-mutated)</span>
+            <button id="btn-submit-new">Submit Order</button>
+          </div>
+        `;
+      }, 100);
+    });
+  </script>
+</body>
+</html>

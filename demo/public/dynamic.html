@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demo - Dynamic DOM</title>
+</head>
+<body>
+  <h1>Dynamic DOM</h1>
+  <nav>
+    <a href="index.html">Home</a>
+  </nav>
+  <hr>
+  <div id="container">
+    <button id="target-btn">Click Me (Stale test)</button>
+  </div>
+  <p id="status"></p>
+  
+  <script>
+    window.makeStale = () => {
+      const container = document.getElementById('container');
+      container.innerHTML = '<button id="target-btn-new" class="target-action">Click Me (Stale test)</button>';
+      
+      document.getElementById('target-btn-new').addEventListener('click', () => {
+        document.getElementById('status').innerText = 'Success! Button clicked.';
+      });
+    };
+
+    // Initial button listener
+    document.getElementById('target-btn').addEventListener('click', () => {
+      document.getElementById('status').innerText = 'Success! Button clicked (initial).';
+    });
+  </script>
+</body>
+</html>

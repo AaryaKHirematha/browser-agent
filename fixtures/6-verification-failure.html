@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture 6 — Verification Failure Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+    button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #6366f1; color: white; cursor: pointer; }
+    .broken-state { margin-top: 1rem; padding: 0.75rem; background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Verification Failure Simulation</h1>
+    <p>Clicking the button returns event success but fails to update the target confirmation status element!</p>
+    <button id="btn-fake-submit">Submit Registration</button>
+
+    <div class="broken-state" id="confirmation-box">
+      Status: Unverified / Pending Action
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('btn-fake-submit').addEventListener('click', () => {
+      // Event handler fires but intentionally NO DOM update occurs to simulate silent failure
+      console.log("Button clicked, but DOM status intentionally un-updated.");
+    });
+  </script>
+</body>
+</html>

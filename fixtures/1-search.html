@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture 1 — Search Application</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+    input { width: 70%; padding: 0.5rem; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #fff; }
+    button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #3b82f6; color: white; cursor: pointer; }
+    button:hover { background: #2563eb; }
+    #results { margin-top: 1rem; border-top: 1px solid #334155; padding-top: 1rem; }
+    .result-item { padding: 0.5rem; margin-bottom: 0.5rem; background: #334155; border-radius: 4px; }
+    .loading { color: #94a3b8; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Search Portal</h1>
+    <div>
+      <input type="text" id="search-input" placeholder="Type query (e.g. quantum)..." />
+      <button id="search-button">Search</button>
+    </div>
+    <div id="results">
+      <p class="placeholder">Enter a search query above.</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('search-button').addEventListener('click', () => {
+      const query = document.getElementById('search-input').value.trim();
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<p class="loading">Searching knowledge base...</p>';
+      
+      setTimeout(() => {
+        if (query.toLowerCase().includes('quantum')) {
+          resultsDiv.innerHTML = `
+            <div class="result-item" id="res-1">
+              <h3>Quantum Computing Overview</h3>
+              <p>Quantum computers leverage superposition and entanglement.</p>
+              <button class="select-btn" id="btn-select-quantum">Select Quantum Article</button>
+            </div>
+            <div class="result-item" id="res-2">
+              <h3>Quantum Cryptography</h3>
+              <p>Post-quantum cryptographic algorithms and security models.</p>
+              <button class="select-btn" id="btn-select-crypto">Select Cryptography Article</button>
+            </div>
+          `;
+        } else {
+          resultsDiv.innerHTML = `<div class="result-item">No results found for "${query}".</div>`;
+        }
+      }, 300);
+    });
+  </script>
+</body>
+</html>

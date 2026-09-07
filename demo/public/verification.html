@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demo - Verification Failure</title>
+</head>
+<body>
+  <h1>Submit Form</h1>
+  <nav>
+    <a href="index.html">Home</a>
+  </nav>
+  <hr>
+  <div>
+    <button id="submit-btn">Submit Order</button>
+  </div>
+  <p id="msg"></p>
+  <script>
+    document.getElementById('submit-btn').addEventListener('click', () => {
+      // Intentionally fails silently to trigger a verification failure
+      // The button click will succeed at the browser level, but the DOM won't show success.
+      document.getElementById('msg').innerText = "Network Error - Try Again Later";
+      document.getElementById('msg').style.color = "red";
+    });
+  </script>
+</body>
+</html>

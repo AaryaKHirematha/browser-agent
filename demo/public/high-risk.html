@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Demo - Settings (High Risk)</title>
+</head>
+<body>
+  <h1>Settings</h1>
+  <nav>
+    <a href="index.html">Home</a>
+  </nav>
+  <hr>
+  <div>
+    <h2>Danger Zone</h2>
+    <p>This action is irreversible.</p>
+    <button id="delete-workspace" style="color: red;">Permanently Delete Workspace</button>
+  </div>
+  <script>
+    document.getElementById('delete-workspace').addEventListener('click', () => {
+      document.body.innerHTML = '<h1>Workspace Deleted</h1><p id="success-msg">Successfully deleted.</p>';
+    });
+  </script>
+</body>
+</html>

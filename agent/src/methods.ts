@@ -148,6 +148,178 @@ export const METHODS: Method[] = [
     shape: { tabId },
     toCommand: () => ({ type: "CLEAR_HIGHLIGHT" }),
   },
+
+  // ── Trustworthy Autonomous Browser Agent — New Tools ──────────────────────
+
+  {
+    name: "browser_screenshot",
+    description:
+      "Capture a screenshot of the visible area of the current tab. Returns a base64-encoded PNG. Useful for visual understanding and verification.",
+    shape: { tabId },
+    toCommand: () => ({ type: "SCREENSHOT" }),
+  },
+];
+
+// ── Server-side tools (handled by the agent server, not the extension) ──────
+// These are registered separately because they don't forward to the extension
+// bridge — they use the agent's internal intelligence modules.
+
+export interface ServerMethod {
+  name: string;
+  description: string;
+  shape: Record<string, z.ZodTypeAny>;
+}
+
+export const SERVER_METHODS: ServerMethod[] = [
+  {
+    name: "browser_observe",
+    description:
+      "Intelligently observe the current page. Automatically selects the best observation mode (STATE/GRAPH/GRAPH_DELTA/VISUAL/HYBRID) based on the task, page complexity, and context. Returns a unified observation with elements, semantic context, and metadata. Pass 'task' to hint at what you're trying to do. Pass 'mode' to force a specific observation mode.",
+    shape: {
+      task: z.string().optional().describe("Task description to guide observation mode selection."),
+      mode: z.enum(["STATE", "GRAPH", "GRAPH_DELTA", "VISUAL", "HYBRID"]).optional().describe("Force a specific observation mode."),
+      query: z.string().optional().describe("Task query for graph filtering (used in GRAPH mode)."),
+      maxNodes: z.number().int().optional().describe("Max interactive nodes (default 200)."),
+      includeScreenshot: z.boolean().optional().describe("Include a screenshot in the observation."),
+      tabId,
+    },
+  },
+  {
+    name: "browser_assess_action",
+    description:
+      "Assess the risk of a proposed browser action before executing it. Returns risk level (LOW/MEDIUM/HIGH/CRITICAL), contributing factors, whether approval is needed, and whether the action is reversible. Always call this before performing potentially dangerous actions.",
+    shape: {
+      action: z.string().describe("The action to assess (e.g. 'click', 'type', 'navigate')."),
+      description: z.string().describe("What the action intends to do."),
+      category: z.enum(["READ", "NAVIGATE", "WRITE", "DELETE", "TRANSACTION", "ACCOUNT_CHANGE"]).describe("Semantic category of the action."),
+      domain: z.string().optional().describe("Domain where the action will be performed."),
+      index: z.number().int().optional().describe("Target element index."),
+    },
+  },
+  {
+    name: "browser_request_approval",
+    description:
+      "Request human approval for a high-risk action. Returns an approval request with a unique ID. The action must not proceed until browser_resolve_approval is called with the request ID. Approval requests expire after 5 minutes.",
+    shape: {
+      action: z.string().describe("Description of the action requiring approval."),
+      target: z.string().describe("What the action targets."),
+      domain: z.string().describe("Domain of the current page."),
+      riskLevel: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).describe("Risk level of the action."),
+      reason: z.string().describe("Why approval is needed."),
+      affectedData: z.string().optional().describe("What data/elements are affected."),
+    },
+  },
+  {
+    name: "browser_resolve_approval",
+    description:
+      "Resolve a pending approval request. Pass the request ID from browser_request_approval and the decision (APPROVED or REJECTED).",
+    shape: {
+      requestId: z.string().describe("The approval request ID."),
+      decision: z.enum(["APPROVED", "REJECTED"]).describe("The approval decision."),
+      reason: z.string().optional().describe("Reason for the decision."),
+    },
+  },
+  {
+    name: "browser_verify_action",
+    description:
+      "Verify whether a recently executed action actually achieved its intended outcome. Checks URL changes, DOM mutations, graph delta, confirmation messages, and error indicators. Returns VERIFIED_SUCCESS, VERIFIED_FAILURE, or UNCERTAIN.",
+    shape: {
+      actionDescription: z.string().describe("What the action was supposed to do."),
+      expectedCondition: z.string().optional().describe("What the expected outcome looks like."),
+      tabId,
+    },
+  },
+  {
+    name: "browser_get_task_state",
+    description:
+      "Get the current task memory state: goal, known entities, action history, verification results, recovery history, and approval history.",
+    shape: {
+      taskId: z.string().optional().describe("Task ID. Uses the active task if not specified."),
+    },
+  },
+  {
+    name: "browser_get_audit",
+    description:
+      "Retrieve the audit log. Returns structured events with timestamps, actions, risk levels, policy decisions, verification results, and recovery attempts. Sensitive data is never included.",
+    shape: {
+      taskId: z.string().optional().describe("Filter by task ID."),
+      types: z.array(z.string()).optional().describe("Filter by event types."),
+      limit: z.number().int().optional().describe("Maximum events to return (default: 50)."),
+      since: z.number().optional().describe("Only events after this timestamp (ms)."),
+    },
+  },
+  {
+    name: "browser_get_policy",
+    description:
+      "Get the current policy configuration: domain rules, default action, auto-allow risk threshold.",
+    shape: {},
+  },
+  {
+    name: "browser_set_policy",
+    description:
+      "Update the policy configuration. Set domain-specific rules for what actions are allowed, denied, or require approval.",
+    shape: {
+      domain: z.string().describe("Domain to configure (e.g. 'github.com')."),
+      trusted: z.boolean().optional().describe("Whether to mark this domain as trusted."),
+      rules: z.array(z.object({
+        actionCategory: z.enum(["READ", "NAVIGATE", "WRITE", "DELETE", "TRANSACTION", "ACCOUNT_CHANGE"]),
+        decision: z.enum(["ALLOW", "DENY", "REQUIRE_APPROVAL"]),
+        description: z.string().optional(),
+      })).optional().describe("Rules for this domain."),
+    },
+  },
+  {
+    name: "browser_cancel_task",
+    description: "Cancel the current task and stop autonomous execution.",
+    shape: {
+      taskId: z.string().describe("Task ID to cancel."),
+      reason: z.string().optional().describe("Reason for cancellation."),
+    },
+  },
+  {
+    name: "browser_create_task",
+    description: "Create a new task record with a goal and start URL.",
+    shape: {
+      goal: z.string().describe("The high level natural language goal for the task."),
+      startUrl: z.string().optional().describe("Initial starting URL."),
+    },
+  },
+  {
+    name: "browser_run_task",
+    description: "Step or run an autonomous task execution loop.",
+    shape: {
+      taskId: z.string().describe("Task ID to run."),
+      actionProposal: z.object({
+        type: z.enum(["CLICK", "TYPE", "NAVIGATE", "SCROLL", "EVAL"]),
+        description: z.string(),
+        category: z.enum(["READ", "NAVIGATE", "WRITE", "DELETE", "TRANSACTION", "ACCOUNT_CHANGE"]),
+        domain: z.string(),
+        params: z.record(z.any()).optional(),
+      }).optional().describe("Proposed action for this step."),
+    },
+  },
+  {
+    name: "browser_get_task",
+    description: "Get full execution status and state machine info for a task.",
+    shape: {
+      taskId: z.string().describe("Task ID to query."),
+    },
+  },
+  {
+    name: "browser_pause_task",
+    description: "Pause an active task.",
+    shape: {
+      taskId: z.string().describe("Task ID to pause."),
+    },
+  },
+  {
+    name: "browser_resume_task",
+    description: "Resume a paused task after approval or resolution.",
+    shape: {
+      taskId: z.string().describe("Task ID to resume."),
+    },
+  },
 ];
 
 export const METHOD_MAP = new Map(METHODS.map((m) => [m.name, m]));
+export const SERVER_METHOD_MAP = new Map(SERVER_METHODS.map((m) => [m.name, m]));

@@ -30,6 +30,8 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "node test-unit.mjs",
+    "test:unit": "node test-unit.mjs",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "mcp": "node dist/mcp.js",
