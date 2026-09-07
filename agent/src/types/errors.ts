@@ -56,7 +56,10 @@ export class AgentError extends Error {
       cause?: Error;
     } = {},
   ) {
-    super(message, { cause: options.cause });
+    super(message);
+    if (options.cause) {
+      (this as any).cause = options.cause;
+    }
     this.name = "AgentError";
     this.code = code;
     this.recoverable = options.recoverable ?? false;

@@ -21,3 +21,5 @@ bench/miniwob-plusplus/
 
 # throwaway scripts
 bench/_tokentest.mjs
+ 
+.env
