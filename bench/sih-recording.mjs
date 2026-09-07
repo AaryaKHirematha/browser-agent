@@ -135,14 +135,34 @@ async function runRecordingSession() {
   console.log(`Started: ${new Date().toISOString()}`);
   console.log(`Working directory: ${ROOT}`);
   console.log("");
-  console.log("📹 RECORDING INSTRUCTIONS:");
-  console.log("   1. Start your screen recording tool (OBS, Loom, etc.)");
-  console.log("   2. Capture the full screen or the browser + terminal");
-  console.log("   3. This script will run the demo automatically");
-  console.log("   4. Follow the narration cues from docs/sih-video-script.md");
+  
+  // Start FFmpeg recording
+  console.log("Starting FFmpeg desktop recording...");
+  const videoPath = path.join(ROOT, "SIH_Trustworthy_Browser_Agent_Demo.mp4");
+  const ffmpeg = spawn("ffmpeg", [
+    "-y",
+    "-f", "gdigrab",
+    "-framerate", "30",
+    "-i", "desktop",
+    "-c:v", "libx264",
+    "-preset", "ultrafast",
+    "-pix_fmt", "yuv420p",
+    "-crf", "18",
+    videoPath
+  ], {
+    cwd: ROOT,
+    stdio: ["pipe", "ignore", "ignore"] // ignore output to avoid terminal clutter, but keep stdin for 'q'
+  });
+
+  ffmpeg.on("error", (err) => {
+    console.error("FFmpeg failed to start:", err);
+  });
+
+  console.log("FFmpeg recording started.");
+  console.log(`Video will be saved to: ${videoPath}`);
   console.log("");
-  console.log("Starting demo runner in 5 seconds...");
-  await sleep(5000);
+  console.log("Starting demo runner in 3 seconds...");
+  await sleep(3000);
 
   // Run the demo runner
   const demoRunner = spawn(
@@ -157,11 +177,15 @@ async function runRecordingSession() {
 
   return new Promise((resolve, reject) => {
     demoRunner.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`Demo runner exited with code ${code}`));
+      console.log("\nDemo runner completed. Stopping FFmpeg...");
+      if (ffmpeg.stdin) {
+        ffmpeg.stdin.write("q");
       }
+      setTimeout(() => {
+        if (!ffmpeg.killed) ffmpeg.kill();
+        if (code === 0) resolve(videoPath);
+        else reject(new Error(`Demo runner exited with code ${code}`));
+      }, 3000); // Wait 3s for ffmpeg to finalize
     });
     demoRunner.on("error", reject);
   });

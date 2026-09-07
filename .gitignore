@@ -23,3 +23,6 @@ bench/miniwob-plusplus/
 bench/_tokentest.mjs
  
 .env
+
+# Video artifacts
+*.mp4

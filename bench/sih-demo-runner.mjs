@@ -59,10 +59,16 @@ function log(scene, msg) {
   console.log(`[${ts}] [Scene ${scene}] ${msg}`);
 }
 
-function section(title) {
+async function narrate(text, seconds) {
+  console.log(`\n💬 CAPTION: "${text}"`);
+  await sleep(seconds * 1000);
+}
+
+async function section(title) {
   console.log(`\n${"═".repeat(70)}`);
   console.log(`  ${title}`);
   console.log(`${"═".repeat(70)}\n`);
+  await sleep(3000);
 }
 
 // ── Evidence Logger ──────────────────────────────────────────────────────────
@@ -93,7 +99,7 @@ function writeEvidence() {
 let agentProc, demoProc;
 
 async function startServers() {
-  section("STARTING SERVICES");
+  await section("STARTING SERVICES");
   console.log("Starting Demo Server (port 3000)...");
   demoProc = spawn("node", [DEMO_SERVER], { stdio: "pipe", cwd: ROOT });
   demoProc.stderr.on("data", (d) => process.stderr.write(`[demo] ${d}`));
@@ -121,7 +127,8 @@ function stopServers() {
 // ── Scene Implementations ────────────────────────────────────────────────────
 
 async function scene2_normalTask(page) {
-  section("SCENE 2 — Normal Autonomous Browser Task");
+  await section("SCENE 2 — Normal Autonomous Browser Task");
+  await narrate("Let's watch the agent perform a normal task. It needs to search for quantum computing.", 5);
 
   await page.goto(`${DEMO_BASE}/index.html`);
   await sleep(800);
@@ -135,6 +142,7 @@ async function scene2_normalTask(page) {
   log(2, `Task created: ${task.id}`);
 
   // Observe
+  await narrate("Watch the pipeline: observe -> assess risk -> type -> click -> verify.", 5);
   const obs = await rpc("browser_observe", { task: "Find search input" });
   log(2, `Observation mode: ${obs.meta.mode}, elements: ${obs.interactiveCount}, latency: ${obs.meta.latencyMs}ms`);
 
@@ -170,6 +178,7 @@ async function scene2_normalTask(page) {
     expectedCondition: "Search results appear",
   });
   log(2, `Verification: ${ver.status} — ${ver.summary}`);
+  await narrate("Verification confirms the action actually succeeded by inspecting the DOM after execution.", 4);
   recordEvidence(2, "Autonomous browser action", "PASS", `Task ${task.id}, Verification: ${ver.status}`);
   recordEvidence(2, "Action Verification", ver.status === "VERIFIED_SUCCESS" ? "PASS" : "PARTIAL", ver.status);
 
@@ -177,11 +186,13 @@ async function scene2_normalTask(page) {
 }
 
 async function scene3_adaptiveObservation(page) {
-  section("SCENE 3 — Adaptive Observation Engine");
+  await section("SCENE 3 — Adaptive Observation Engine");
+  await narrate("The agent dynamically chooses how much information it needs from the webpage...", 4);
 
   await page.goto(`${DEMO_BASE}/index.html`);
   await sleep(800);
 
+  await narrate("STATE gives a flat list. GRAPH provides structure. DELTA tracks changes. VISUAL adds screenshots.", 5);
   const modes = ["STATE", "GRAPH", "GRAPH_DELTA", "VISUAL", "HYBRID"];
   for (const mode of modes) {
     const obs = await rpc("browser_observe", {
@@ -195,7 +206,8 @@ async function scene3_adaptiveObservation(page) {
 }
 
 async function scene4_riskEngine(page) {
-  section("SCENE 4 — Risk Engine");
+  await section("SCENE 4 — Risk Engine");
+  await narrate("Before any action executes, the Risk Engine evaluates it. Navigation scores LOW.", 5);
 
   // LOW risk — safe navigation
   const low = await rpc("browser_assess_action", {
@@ -208,6 +220,7 @@ async function scene4_riskEngine(page) {
   recordEvidence(4, "Risk Engine (LOW)", low.level === "LOW" ? "PASS" : "FAIL", `Level: ${low.level}`);
 
   // HIGH risk — delete action
+  await narrate("A destructive delete scores HIGH. It requires human approval.", 5);
   const high = await rpc("browser_assess_action", {
     action: "CLICK",
     description: "Delete entire workspace permanently",
@@ -219,6 +232,7 @@ async function scene4_riskEngine(page) {
   recordEvidence(4, "Risk Engine (HIGH)", high.approvalRequired ? "PASS" : "FAIL", `Level: ${high.level}, Approval Required: ${high.approvalRequired}`);
 
   // CRITICAL risk — financial transaction
+  await narrate("A financial transaction on a banking domain scores CRITICAL. Also requires approval.", 5);
   const crit = await rpc("browser_assess_action", {
     action: "CLICK",
     description: "Confirm $500 payment transfer",
@@ -230,7 +244,8 @@ async function scene4_riskEngine(page) {
 }
 
 async function scene5_policyEngine(page) {
-  section("SCENE 5 — Policy Engine");
+  await section("SCENE 5 — Policy Engine");
+  await narrate("Risk alone is not enough. The Policy Engine adds domain-specific rules.", 5);
 
   // Set a domain policy that denies DELETE on example-bank.com
   await rpc("browser_set_policy", {
@@ -248,6 +263,7 @@ async function scene5_policyEngine(page) {
   log(5, `Policy config: ${config.domains.length} domain rules, default: ${config.defaultAction}`);
 
   // Test: allowed read
+  await narrate("We've configured a banking domain that allows reading but denies all deletion.", 5);
   const readRisk = await rpc("browser_assess_action", {
     action: "NAVIGATE",
     description: "Read account balance",
@@ -269,7 +285,8 @@ async function scene5_policyEngine(page) {
 }
 
 async function scene6_humanApproval(page) {
-  section("SCENE 6 — Human Approval Gateway");
+  await section("SCENE 6 — Human Approval Gateway");
+  await narrate("When a high-risk action is proposed, execution pauses and an approval card appears on the dashboard.", 6);
 
   await page.goto(`${DEMO_BASE}/high-risk.html`);
   await sleep(800);
@@ -291,6 +308,7 @@ async function scene6_humanApproval(page) {
   log(6, `Dashboard pending approvals: ${dashState.pendingApprovals.length}`);
 
   // APPROVE the action
+  await narrate("The operator can approve — and the action proceeds with full verification...", 5);
   const approved = await rpc("browser_resolve_approval", {
     requestId: req.id,
     decision: "APPROVED",
@@ -300,6 +318,7 @@ async function scene6_humanApproval(page) {
   recordEvidence(6, "Approval APPROVED", approved.status === "APPROVED" ? "PASS" : "FAIL", approved.status);
 
   // Second request — this one gets REJECTED
+  await narrate("...or reject, and the action is permanently blocked.", 5);
   const req2 = await rpc("browser_request_approval", {
     action: "TRANSACTION",
     target: "Confirm $500 Payment to unknown recipient",
@@ -319,7 +338,8 @@ async function scene6_humanApproval(page) {
 }
 
 async function scene7_verification(page) {
-  section("SCENE 7 — Action Verification");
+  await section("SCENE 7 — Action Verification");
+  await narrate("After every action, the Verification Engine takes a post-action snapshot and compares.", 5);
 
   // Successful verification
   await page.goto(`${DEMO_BASE}/index.html`);
@@ -343,6 +363,7 @@ async function scene7_verification(page) {
   }
 
   // Verification failure
+  await narrate("On this intentionally broken form, the button fires but nothing updates.", 5);
   await page.goto(`${DEMO_BASE}/verification.html`);
   await sleep(800);
 
@@ -364,7 +385,8 @@ async function scene7_verification(page) {
 }
 
 async function scene8_recovery(page) {
-  section("SCENE 8 — Self-Healing Recovery");
+  await section("SCENE 8 — Self-Healing Recovery");
+  await narrate("Webpages are dynamic. If the agent's target element disappears, it doesn't crash.", 5);
 
   await page.goto(`${DEMO_BASE}/dynamic.html`);
   await sleep(800);
@@ -390,6 +412,7 @@ async function scene8_recovery(page) {
     }
 
     // Recovery: re-observe and semantically re-match
+    await narrate("The Recovery Engine classifies the failure, re-observes, and semantically re-matches the target.", 6);
     const obs2 = await rpc("browser_observe", { task: "Find submit button after DOM change" });
     const newSubmit = obs2.elements.find((e) => e.text?.toLowerCase().includes("submit"));
     log(8, `Recovery observation: found ${obs2.interactiveCount} elements, new submit at #${newSubmit?.index}`);
@@ -410,11 +433,13 @@ async function scene8_recovery(page) {
 }
 
 async function scene9_promptInjection(page) {
-  section("SCENE 9 — Prompt Injection Defense");
+  await section("SCENE 9 — Prompt Injection Defense");
+  await narrate("Malicious webpages can embed text that looks like instructions to the AI.", 5);
 
   await page.goto(`${DEMO_BASE}/prompt-injection.html`);
   await sleep(1000);
 
+  await narrate("The Prompt Injection Detector scans every observation before it reaches the language model.", 5);
   const obs = await rpc("browser_observe", { task: "Read discussion forum", mode: "GRAPH" });
   log(9, `Observed page with ${obs.interactiveCount} elements`);
 
@@ -430,7 +455,8 @@ async function scene9_promptInjection(page) {
 }
 
 async function scene10_privacy(page) {
-  section("SCENE 10 — Privacy Shield");
+  await section("SCENE 10 — Privacy Shield");
+  await narrate("When the agent observes a page containing sensitive data, the Privacy Shield redacts them locally.", 6);
 
   await page.goto(`${DEMO_BASE}/sensitive.html`);
   await sleep(1000);
@@ -454,6 +480,7 @@ async function scene10_privacy(page) {
 
   if (leaks.length === 0) {
     log(10, "✓ All sensitive data successfully redacted");
+    await narrate("The original page is unchanged, but the agent's view replaces sensitive values with REDACTED markers.", 6);
     recordEvidence(10, "Privacy shield", "PASS", `${obs.redaction?.detectionsCount || 0} redactions, zero leaks`);
   } else {
     log(10, `✗ LEAK DETECTED: ${leaks.join(", ")}`);
@@ -462,7 +489,8 @@ async function scene10_privacy(page) {
 }
 
 async function scene11_taskMemory() {
-  section("SCENE 11 — Task Memory");
+  await section("SCENE 11 — Task Memory");
+  await narrate("The agent maintains session-scoped task memory to provide context throughout execution.", 6);
 
   // Create a task and exercise memory
   const task = await rpc("browser_create_task", {
@@ -484,7 +512,8 @@ async function scene11_taskMemory() {
 }
 
 async function scene12_audit() {
-  section("SCENE 12 — Audit Log");
+  await section("SCENE 12 — Audit Log");
+  await narrate("Every decision, risk assessment, and approval is recorded in a structured audit log.", 6);
 
   const audit = await rpc("browser_get_audit", { limit: 30 });
   log(12, `Audit log contains ${audit.length} events`);
@@ -502,12 +531,14 @@ async function scene12_audit() {
   const auditStr = JSON.stringify(audit);
   const hasSecrets = /john\.doe|987-65-4321|4532-8901|sk_live_|SuperSecret/i.test(auditStr);
   log(12, `Sensitive data in audit: ${hasSecrets ? "LEAKED!" : "None (correctly sanitized)"}`);
+  await narrate("The audit logger itself runs through the Privacy Shield to sanitize output.", 5);
 
   recordEvidence(12, "Audit logging", audit.length > 0 ? "PASS" : "FAIL", `${audit.length} events, sanitized: ${!hasSecrets}`);
 }
 
 async function scene13_performance() {
-  section("SCENE 13 — Performance Metrics");
+  await section("SCENE 13 — Performance Metrics");
+  await narrate("The safety layer adds minimal overhead, as verified by automated benchmarks.", 6);
 
   // Benchmark observation latency (10 calls)
   const latencies = [];
@@ -539,16 +570,24 @@ async function main() {
   try {
     await startServers();
 
-    section("LAUNCHING BROWSER");
+    await section("LAUNCHING BROWSER");
     browser = await chromium.launchPersistentContext("", {
       headless: false,
+      viewport: { width: 1280, height: 800 },
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
+        `--window-size=1280,850`,
+        `--window-position=50,50`
       ],
     });
 
     page = browser.pages()[0] || (await browser.newPage());
+    
+    // Open dashboard in a new page/tab so it is active
+    const dashPage = await browser.newPage();
+    await dashPage.goto(DASHBOARD);
+    await page.bringToFront();
 
     // Wait for extension connection
     console.log("Waiting for extension to connect...");
@@ -600,7 +639,7 @@ async function main() {
 
     // ── Summary ───────────────────────────────────────────────────────────────
 
-    section("DEMO RESULTS SUMMARY");
+    await section("DEMO RESULTS SUMMARY");
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     const passed = evidence.filter((e) => e.result === "PASS").length;
     const failed = evidence.filter((e) => e.result === "FAIL").length;
@@ -620,6 +659,7 @@ async function main() {
       console.log(`\n⚠  ${failed} feature(s) failed. Review evidence at ${evidencePath}`);
     } else {
       console.log("\n✨ All features demonstrated successfully!");
+      await narrate("Our goal is not simply to make browser agents autonomous. It is to make their autonomy trustworthy.", 7);
     }
   } catch (err) {
     console.error("FATAL:", err);
