@@ -25,9 +25,20 @@ async function setupServer() {
       } else if (behavior === "repeated-429") {
         res.writeHead(429, { "Retry-After": "0.1" });
         res.end(JSON.stringify({ error: "rate limited" }));
+      } else if (behavior === "429-with-date") {
+        const d = new Date(Date.now() + 2000);
+        res.writeHead(429, { "Retry-After": d.toUTCString() });
+        res.end(JSON.stringify({ error: "rate limited" }));
+        behavior = "ok";
       } else if (behavior === "503-failure") {
         res.writeHead(503);
         res.end(JSON.stringify({ error: "service unavailable" }));
+      } else if (behavior === "malformed-json") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end("<html>Not json</html>");
+      } else if (behavior === "destroy-connection") {
+        req.socket.destroy();
+        behavior = "ok";
       } else {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ id: "msg_1", content: [] }));
@@ -108,6 +119,31 @@ async function runTests() {
   } catch (err) {
     assert.strictEqual(err.name, "AbortError");
   }
+
+  console.log("7. HTTP 429 with Retry-After (HTTP-date)");
+  requestCount = 0;
+  behavior = "429-with-date";
+  t0 = Date.now();
+  res = await fetchWithRetry(url, { method: "POST" });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(requestCount, 2);
+  assert.ok(Date.now() - t0 >= 500); // Allow some leeway for timer precision
+
+  console.log("8. Network Connection Failure -> Recovery");
+  requestCount = 0;
+  behavior = "destroy-connection";
+  res = await fetchWithRetry(url, { method: "POST" }, { maxRetries: 3, baseWaitMs: 10 });
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(requestCount, 2);
+  
+  // Malformed JSON test is for createMessage, I will test that fetchWithRetry returns the malformed JSON.
+  console.log("9. Malformed Provider Response");
+  requestCount = 0;
+  behavior = "malformed-json";
+  res = await fetchWithRetry(url, { method: "POST" });
+  assert.strictEqual(res.status, 200);
+  const text = await res.text();
+  assert.strictEqual(text, "<html>Not json</html>");
 
   server.close();
   console.log("All fetchWithRetry tests passed!");

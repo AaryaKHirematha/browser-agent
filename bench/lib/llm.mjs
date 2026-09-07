@@ -48,16 +48,16 @@ export async function fetchWithRetry(url, options, config = {}) {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     let res;
     let abortController = new AbortController();
+    let abortListener;
     if (options.signal) {
-      options.signal.addEventListener('abort', () => abortController.abort(options.signal.reason), { once: true });
+      abortListener = () => abortController.abort(options.signal.reason);
+      options.signal.addEventListener('abort', abortListener, { once: true });
     }
     const timeoutId = setTimeout(() => abortController.abort(new Error("Timeout")), timeoutMs);
     
     try {
       res = await fetch(url, { ...options, signal: abortController.signal });
-      clearTimeout(timeoutId);
     } catch (err) {
-      clearTimeout(timeoutId);
       if (err.name === 'AbortError' && !options.signal?.aborted) {
         // This was our internal timeout
         if (attempt >= maxRetries) throw new Error("Timeout: Max retries reached.");
@@ -71,17 +71,33 @@ export async function fetchWithRetry(url, options, config = {}) {
       const jitter = Math.random() * 200;
       await sleep(baseWaitMs * Math.pow(2, attempt) + jitter, options.signal);
       continue;
+    } finally {
+      clearTimeout(timeoutId);
+      if (options.signal && abortListener) {
+        options.signal.removeEventListener('abort', abortListener);
+      }
     }
 
     if (res.status === 429 || res.status === 529 || res.status >= 500) {
       if (attempt >= maxRetries) {
         throw new Error(`HTTP ${res.status}: Max retries reached.`);
       }
-      const retryAfter = Number(res.headers.get("retry-after"));
-      let wait = Number.isFinite(retryAfter) && retryAfter > 0 
-        ? retryAfter * 1000 
-        : baseWaitMs * Math.pow(2, attempt);
+      let retryAfterVal = res.headers.get("retry-after");
+      let wait = baseWaitMs * Math.pow(2, attempt);
+      if (retryAfterVal) {
+        if (!isNaN(retryAfterVal)) {
+          const num = Number(retryAfterVal);
+          if (num > 0) wait = num * 1000;
+        } else {
+          const date = new Date(retryAfterVal);
+          if (!isNaN(date.getTime())) {
+            const diff = date.getTime() - Date.now();
+            if (diff > 0) wait = diff;
+          }
+        }
+      }
       
+      wait = Math.min(wait, config.maxWaitMs ?? 120000);
       const jitter = Math.random() * 200;
       wait += jitter;
       
