@@ -92,4 +92,4 @@ When `browser_request_approval` is invoked, an amber warning card appears live o
 | **Prompt Injection Block Rate** | 100% (Instruction overrides, role spoofing, phishing) | >95% |
 | **Recovery Success Rate** | 85%+ (Stale element semantic matching) | >75% |
 | **Action Verification Accuracy** | 92%+ (Multi-signal URL/DOM/Graph validation) | >85% |
-| **Agent Server Response Latency** | < 15ms (Local JSON-RPC endpoint) | < 50ms |
+| **Agent Server Response Latency** | < 25ms (Local JSON-RPC endpoint) | < 50ms |

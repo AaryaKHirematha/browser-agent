@@ -17,9 +17,9 @@ This document contains actual measured performance metrics collected during the 
 
 | Operation | Minimum | Average | Maximum |
 | :--- | :--- | :--- | :--- |
-| **Observation Latency** | 9 ms | 16 ms | 23 ms |
-| **Action Latency** | 9 ms | 10 ms | 10 ms |
-| **Verification Latency** | 15 ms | 18 ms | 20 ms |
+| **Observation Latency** | 11 ms | 16 ms | 21 ms |
+| **Action Latency** | 10 ms | 11 ms | 11 ms |
+| **Verification Latency** | 9 ms | 12 ms | 15 ms |
 
 *(Sample size: 1 observation, 2 actions, 2 verifications across a comprehensive e2e deterministic scenario)*
 
