@@ -4,28 +4,46 @@
 <meta charset="UTF-8">
 <title>Demo - Search Products</title>
 <style>
-  body { font-family: sans-serif; padding: 20px; }
-  .product { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+  .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 650px; }
+  input { padding: 0.5rem; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #fff; margin-right: 0.5rem; }
+  input[type="text"] { width: 50%; }
+  input[type="number"] { width: 20%; }
+  button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #3b82f6; color: white; cursor: pointer; font-weight: 600; }
+  button:hover { background: #2563eb; }
+  .product { border: 1px solid #334155; background: #334155; padding: 1rem; margin-top: 0.75rem; border-radius: 6px; }
+  .product h3 { color: #60a5fa; margin-bottom: 0.25rem; }
+  .product p { color: #94a3b8; margin-bottom: 0.5rem; }
+  .product button { background: #10b981; font-size: 0.85rem; padding: 0.4rem 0.8rem; }
+  .product button:hover { background: #059669; }
+  nav { margin-bottom: 1rem; }
+  nav a { color: #60a5fa; text-decoration: none; margin-right: 1rem; }
+  nav a:hover { text-decoration: underline; }
+  #results { margin-top: 1rem; }
+  #no-results { color: #94a3b8; font-style: italic; }
 </style>
 </head>
 <body>
-  <h1>Search Products</h1>
-  <nav>
-    <a href="index.html">Home</a> | 
-    <a href="sensitive.html">Profile (Sensitive)</a> | 
-    <a href="high-risk.html">Settings (High Risk)</a> | 
-    <a href="dynamic.html">Dynamic DOM</a> | 
-    <a href="prompt-injection.html">Comments</a>
-  </nav>
-  <hr>
+  <div class="card">
+    <h1>🔍 Search Products</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="sensitive.html">Profile</a>
+      <a href="high-risk.html">Settings</a>
+      <a href="dynamic.html">Dynamic DOM</a>
+      <a href="prompt-injection.html">Comments</a>
+      <a href="verification.html">Verification</a>
+    </nav>
+    <hr style="border-color: #334155; margin: 1rem 0;">
   
-  <div>
-    <input type="text" id="search-box" placeholder="Enter product name...">
-    <input type="number" id="max-price" placeholder="Max price">
-    <button id="search-btn">Search</button>
+    <div>
+      <input type="text" id="search-box" placeholder="Enter product name (e.g. quantum)...">
+      <input type="number" id="max-price" placeholder="Max price">
+      <button id="search-btn">Search</button>
+    </div>
+  
+    <div id="results"></div>
   </div>
-  
-  <div id="results"></div>
 
   <script>
     const products = [

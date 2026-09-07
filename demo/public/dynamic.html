@@ -2,32 +2,72 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Demo - Dynamic DOM</title>
+<title>Demo - Dynamic DOM (Recovery Test)</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+  .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+  button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #10b981; color: white; cursor: pointer; margin-right: 0.5rem; font-weight: bold; }
+  button:hover { background: #059669; }
+  button.trigger { background: #f59e0b; color: #000; }
+  button.trigger:hover { background: #d97706; }
+  .target-area { background: #334155; padding: 1rem; border-radius: 4px; margin-top: 1rem; border: 1px dashed #475569; }
+  .target-area span { color: #94a3b8; font-size: 0.85rem; }
+  #status { margin-top: 1rem; color: #22c55e; font-family: 'JetBrains Mono', monospace; }
+  nav a { color: #60a5fa; }
+</style>
 </head>
 <body>
-  <h1>Dynamic DOM</h1>
-  <nav>
-    <a href="index.html">Home</a>
-  </nav>
-  <hr>
-  <div id="container">
-    <button id="target-btn">Click Me (Stale test)</button>
+  <div class="card">
+    <h1>🔄 Dynamic DOM Test</h1>
+    <nav>
+      <a href="index.html">← Home</a>
+    </nav>
+    <hr style="border-color: #334155; margin: 1rem 0;">
+    <p style="color: #94a3b8; margin-bottom: 1rem;">Clicking "Mutate DOM" replaces all elements in the container, simulating a DOM re-render that detaches original nodes.</p>
+    <button class="trigger" id="trigger-mutate">⚡ Mutate DOM Nodes</button>
+
+    <div id="container" class="target-area">
+      <div id="node-v1" data-role="submit-action">
+        <span>Target Action Node (Original ID: node-v1)</span>
+        <br><br>
+        <button id="target-btn">Click Me (Stale test)</button>
+        <button id="btn-submit-orig">Submit Order</button>
+      </div>
+    </div>
+    <p id="status"></p>
   </div>
-  <p id="status"></p>
-  
+
   <script>
+    // Expose for Playwright
     window.makeStale = () => {
       const container = document.getElementById('container');
-      container.innerHTML = '<button id="target-btn-new" class="target-action">Click Me (Stale test)</button>';
-      
+      container.innerHTML = `
+        <div id="node-v2-mutated" data-role="submit-action">
+          <span>Target Action Node (Re-rendered ID: node-v2-mutated)</span>
+          <br><br>
+          <button id="target-btn-new" class="target-action">Click Me (Stale test)</button>
+          <button id="btn-submit-new">Submit Order</button>
+        </div>
+      `;
+
       document.getElementById('target-btn-new').addEventListener('click', () => {
-        document.getElementById('status').innerText = 'Success! Button clicked.';
+        document.getElementById('status').innerText = '✓ Success! Button clicked (after recovery).';
+      });
+      document.getElementById('btn-submit-new').addEventListener('click', () => {
+        document.getElementById('status').innerText = '✓ Success! Order submitted (after recovery).';
       });
     };
 
-    // Initial button listener
+    document.getElementById('trigger-mutate').addEventListener('click', () => {
+      window.makeStale();
+    });
+
+    // Initial button listeners
     document.getElementById('target-btn').addEventListener('click', () => {
-      document.getElementById('status').innerText = 'Success! Button clicked (initial).';
+      document.getElementById('status').innerText = '✓ Success! Button clicked (initial).';
+    });
+    document.getElementById('btn-submit-orig').addEventListener('click', () => {
+      document.getElementById('status').innerText = '✓ Success! Order submitted (initial).';
     });
   </script>
 </body>

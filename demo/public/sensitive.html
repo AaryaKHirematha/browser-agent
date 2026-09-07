@@ -3,23 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <title>Demo - Sensitive Profile</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+  .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+  .field { margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #334155; }
+  label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.25rem; font-weight: 600; }
+  .value { font-family: 'JetBrains Mono', monospace; color: #fbbf24; }
+  input { width: 60%; padding: 0.5rem; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #fff; }
+  button { padding: 0.5rem 1rem; border-radius: 4px; border: none; background: #6366f1; color: white; cursor: pointer; }
+  nav a { color: #60a5fa; }
+</style>
 </head>
 <body>
-  <h1>Profile (Sensitive)</h1>
-  <nav>
-    <a href="index.html">Home</a>
-  </nav>
-  <hr>
-  <div>
-    <h2>Personal Information</h2>
-    <p>Email: john.doe.privacy@test-domain.org</p>
-    <p>Phone: 555-0198-4321</p>
-    <p>API Key: sk_live_99887766554433221100abc</p>
-    <p>Credit Card: 4532-8901-2345-6789</p>
-    
-    <h3>Update Password</h3>
-    <input type="password" id="new-password" placeholder="New password">
-    <button id="save-password">Save</button>
+  <div class="card">
+    <h1>👤 Account Profile Details</h1>
+    <nav>
+      <a href="index.html">← Home</a>
+    </nav>
+    <hr style="border-color: #334155; margin: 1rem 0;">
+
+    <div class="field">
+      <label>Email Address:</label>
+      <p class="value" id="user-email">john.doe.privacy@test-domain.org</p>
+    </div>
+    <div class="field">
+      <label>Phone Number:</label>
+      <p class="value" id="user-phone">555-0198-4321</p>
+    </div>
+    <div class="field">
+      <label>Social Security Number (SSN):</label>
+      <p class="value" id="user-ssn">987-65-4321</p>
+    </div>
+    <div class="field">
+      <label>Credit Card Number:</label>
+      <p class="value" id="user-cc">4532-8901-2345-6789</p>
+    </div>
+    <div class="field">
+      <label>API Live Secret Key:</label>
+      <p class="value" id="user-apikey">sk_live_99887766554433221100abc</p>
+    </div>
+    <div class="field">
+      <label>Password Field:</label>
+      <input type="password" id="pass-field" value="SuperSecretP@ssword2026">
+    </div>
+
+    <div style="margin-top: 1rem;">
+      <button id="save-password">Save Changes</button>
+    </div>
   </div>
 </body>
 </html>

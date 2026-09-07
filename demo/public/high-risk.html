@@ -2,22 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Demo - Settings (High Risk)</title>
+<title>Demo - Settings (High Risk Operations)</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+  .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+  .danger-zone { border: 1px solid #ef4444; border-radius: 8px; padding: 1rem; margin-top: 1rem; background: #ef44440a; }
+  .danger-zone h3 { color: #ef4444; margin-bottom: 0.5rem; }
+  button.danger { background: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
+  button.danger:hover { background: #dc2626; }
+  button.pay { background: #8b5cf6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 1rem; }
+  button.pay:hover { background: #7c3aed; }
+  .status { margin-top: 1rem; padding: 0.75rem; border-radius: 4px; display: none; }
+  .status.success { background: #065f46; color: #a7f3d0; display: block; }
+  nav a { color: #60a5fa; }
+</style>
 </head>
 <body>
-  <h1>Settings</h1>
-  <nav>
-    <a href="index.html">Home</a>
-  </nav>
-  <hr>
-  <div>
-    <h2>Danger Zone</h2>
-    <p>This action is irreversible.</p>
-    <button id="delete-workspace" style="color: red;">Permanently Delete Workspace</button>
+  <div class="card">
+    <h1>⚙️ High Risk Operation Panel</h1>
+    <nav>
+      <a href="index.html">← Home</a>
+    </nav>
+    <hr style="border-color: #334155; margin: 1rem 0;">
+
+    <div class="danger-zone">
+      <h3>🗑️ Account Deletion</h3>
+      <p style="color: #94a3b8; margin-bottom: 0.75rem;">Permanently delete user workspace and all stored artifacts. This action is irreversible.</p>
+      <button class="danger" id="btn-delete-account">Delete Workspace</button>
+    </div>
+
+    <div class="danger-zone" style="border-color: #8b5cf6; background: #8b5cf60a; margin-top: 1rem;">
+      <h3 style="color: #8b5cf6;">💳 Financial Payment ($500.00)</h3>
+      <p style="color: #94a3b8; margin-bottom: 0.75rem;">Simulated high value fund transfer to recipient.</p>
+      <button class="pay" id="btn-submit-payment">Confirm $500 Payment</button>
+    </div>
+
+    <div id="status-box" class="status"></div>
   </div>
+
   <script>
-    document.getElementById('delete-workspace').addEventListener('click', () => {
-      document.body.innerHTML = '<h1>Workspace Deleted</h1><p id="success-msg">Successfully deleted.</p>';
+    document.getElementById('btn-delete-account').addEventListener('click', () => {
+      const box = document.getElementById('status-box');
+      box.className = 'status success';
+      box.textContent = 'ACTION COMPLETED: Workspace deleted successfully.';
+    });
+    document.getElementById('btn-submit-payment').addEventListener('click', () => {
+      const box = document.getElementById('status-box');
+      box.className = 'status success';
+      box.textContent = 'ACTION COMPLETED: $500 Payment processed successfully.';
     });
   </script>
 </body>

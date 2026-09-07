@@ -3,23 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <title>Demo - Verification Failure</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 2rem; background: #0f172a; color: #f8fafc; }
+  .card { background: #1e293b; border: 1px solid #334155; padding: 1.5rem; border-radius: 8px; max-width: 600px; }
+  button { padding: 0.75rem 1.5rem; border-radius: 4px; border: none; background: #6366f1; color: white; cursor: pointer; font-weight: bold; }
+  button:hover { background: #4f46e5; }
+  .status-box { margin-top: 1rem; padding: 0.75rem; background: #334155; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+  nav a { color: #60a5fa; }
+</style>
 </head>
 <body>
-  <h1>Submit Form</h1>
-  <nav>
-    <a href="index.html">Home</a>
-  </nav>
-  <hr>
-  <div>
+  <div class="card">
+    <h1>📋 Verification Failure Simulation</h1>
+    <nav>
+      <a href="index.html">← Home</a>
+    </nav>
+    <hr style="border-color: #334155; margin: 1rem 0;">
+    <p style="color: #94a3b8; margin-bottom: 1rem;">Clicking the button returns event success but fails to update the target confirmation status element!</p>
     <button id="submit-btn">Submit Order</button>
+
+    <div class="status-box" id="confirmation-box">
+      Status: Unverified / Pending Action
+    </div>
   </div>
-  <p id="msg"></p>
+
   <script>
     document.getElementById('submit-btn').addEventListener('click', () => {
-      // Intentionally fails silently to trigger a verification failure
-      // The button click will succeed at the browser level, but the DOM won't show success.
-      document.getElementById('msg').innerText = "Network Error - Try Again Later";
-      document.getElementById('msg').style.color = "red";
+      // Event handler fires but intentionally shows ERROR instead of success
+      // This simulates a silent failure — the button click "worked" at the browser level
+      // but the application did NOT successfully process the action.
+      const msg = document.getElementById('confirmation-box');
+      msg.innerText = "Network Error - Try Again Later";
+      msg.style.color = "#ef4444";
     });
   </script>
 </body>
