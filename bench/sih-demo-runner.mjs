@@ -59,8 +59,39 @@ function log(scene, msg) {
   console.log(`[${ts}] [Scene ${scene}] ${msg}`);
 }
 
+let activePage = null;
+
 async function narrate(text, seconds) {
   console.log(`\n💬 CAPTION: "${text}"`);
+  if (activePage) {
+    try {
+      await activePage.evaluate((captionText) => {
+        let div = document.getElementById('demo-caption-box');
+        if (!div) {
+          div = document.createElement('div');
+          div.id = 'demo-caption-box';
+          div.style.position = 'fixed';
+          div.style.bottom = '40px';
+          div.style.left = '50%';
+          div.style.transform = 'translateX(-50%)';
+          div.style.backgroundColor = 'rgba(0, 0, 0, 0.85)';
+          div.style.color = '#fff';
+          div.style.padding = '15px 30px';
+          div.style.borderRadius = '8px';
+          div.style.fontSize = '26px';
+          div.style.fontFamily = 'system-ui, sans-serif';
+          div.style.zIndex = '2147483647';
+          div.style.textAlign = 'center';
+          div.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+          div.style.border = '2px solid #3b82f6';
+          div.style.maxWidth = '80%';
+          document.body.appendChild(div);
+        }
+        div.innerText = captionText;
+        div.style.display = 'block';
+      }, text);
+    } catch (e) { /* ignore if page is closed/navigating */ }
+  }
   await sleep(seconds * 1000);
 }
 
@@ -103,10 +134,12 @@ async function startServers() {
   console.log("Starting Demo Server (port 3000)...");
   demoProc = spawn("node", [DEMO_SERVER], { stdio: "pipe", cwd: ROOT });
   demoProc.stderr.on("data", (d) => process.stderr.write(`[demo] ${d}`));
+  demoProc.stdout.on("data", (d) => process.stdout.write(`[demo] ${d}`));
 
   console.log("Starting Agent Server (ports 8777/8778)...");
   agentProc = spawn("node", [AGENT_SERVER], { stdio: "pipe", cwd: ROOT });
   agentProc.stderr.on("data", (d) => process.stderr.write(`[agent] ${d}`));
+  agentProc.stdout.on("data", (d) => process.stdout.write(`[agent] ${d}`));
 
   await sleep(3000);
 
@@ -125,6 +158,16 @@ function stopServers() {
 }
 
 // ── Scene Implementations ────────────────────────────────────────────────────
+
+async function scene1_title(page) {
+  await section("SCENE 1 — TITLE");
+  await page.goto(`${DEMO_BASE}/title.html`);
+  await sleep(1000);
+  await narrate("AI agents can interact with websites, but autonomous browser actions introduce safety, security, privacy and reliability risks.", 6);
+  await page.goto(`${DEMO_BASE}/architecture.html`);
+  await sleep(1000);
+  await narrate("Instead of allowing an AI agent to blindly control a browser, our system adds a trust and safety layer.", 6);
+}
 
 async function scene2_normalTask(page) {
   await section("SCENE 2 — Normal Autonomous Browser Task");
@@ -555,6 +598,29 @@ async function scene13_performance() {
   recordEvidence(13, "Performance", "PASS", `Live avg: ${avg(latencies)}ms, benchmarks verified`);
 }
 
+async function scene14_mcp(page) {
+  await section("SCENE 14 — Remote MCP Connectivity");
+  await page.goto(`${DEMO_BASE}/mcp.html`);
+  await sleep(1000);
+  await narrate("The Browser Agent exposes a standards-based remote MCP interface.", 5);
+  await narrate("Designed for interoperability with MCP-compatible AI agents.", 5);
+}
+
+async function scene15_stack(page) {
+  await section("SCENE 15 — Technology Stack");
+  await page.goto(`${DEMO_BASE}/stack.html`);
+  await sleep(1000);
+  await narrate("The safety layer is built on Node.js, TypeScript, and Chrome Extension MV3.", 5);
+}
+
+async function scene16_conclusion(page) {
+  await section("SCENE 16 — Conclusion");
+  await page.goto(`${DEMO_BASE}/conclusion.html`);
+  await sleep(1000);
+  await narrate("Making Browser Agents Trustworthy.", 4);
+  await narrate("Don't just automate the browser. Make browser agents trustworthy.", 5);
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -565,22 +631,26 @@ async function main() {
     await startServers();
 
     await section("LAUNCHING BROWSER");
+    const recordDir = path.join(ROOT, "demo-recordings/raw");
+    fs.mkdirSync(recordDir, { recursive: true });
+
     browser = await chromium.launchPersistentContext("", {
       headless: false,
-      viewport: { width: 1280, height: 800 },
+      viewport: { width: 1920, height: 1080 },
+      recordVideo: { dir: recordDir, size: { width: 1920, height: 1080 } },
       args: [
         `--disable-extensions-except=${EXTENSION_PATH}`,
         `--load-extension=${EXTENSION_PATH}`,
-        `--window-size=1280,850`,
-        `--window-position=50,50`
+        `--window-size=1920,1080`,
+        `--window-position=0,0`
       ],
     });
 
     page = browser.pages()[0] || (await browser.newPage());
+    activePage = page;
     
-    // Open dashboard in a new page/tab so it is active
-    const dashPage = await browser.newPage();
-    await dashPage.goto(DASHBOARD);
+    // Do not open dashboard in a second tab to prevent Playwright from recording multiple videos unnecessarily
+    // The demo works fine without the dashboard being visible.
     await page.bringToFront();
 
     // Wait for extension connection
@@ -607,6 +677,7 @@ async function main() {
     // ── Execute Scenes ───────────────────────────────────────────────────────
 
     const scenes = [
+      [1, () => scene1_title(page)],
       [2, () => scene2_normalTask(page)],
       [3, () => scene3_adaptiveObservation(page)],
       [4, () => scene4_riskEngine(page)],
@@ -619,6 +690,9 @@ async function main() {
       [11, () => scene11_taskMemory()],
       [12, () => scene12_audit()],
       [13, () => scene13_performance()],
+      [14, () => scene14_mcp(page)],
+      [15, () => scene15_stack(page)],
+      [16, () => scene16_conclusion(page)],
     ];
 
     for (const [num, fn] of scenes) {

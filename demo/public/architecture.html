@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>System Architecture</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 3rem; text-align: center; }
+  h1 { font-size: 3rem; color: #38bdf8; margin-bottom: 2rem; }
+  .arch-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; font-size: 1.2rem; }
+  .box { background: #1e293b; border: 2px solid #3b82f6; padding: 1rem 2rem; border-radius: 8px; font-weight: bold; min-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+  .box.layer { border-color: #10b981; background: #064e3b; padding: 1.5rem; }
+  .layer-items { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 1rem; font-weight: normal; margin-top: 1rem; text-align: left; }
+  .layer-items span { background: #0f172a; padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid #059669; }
+  .arrow { color: #64748b; font-size: 2rem; }
+</style>
+</head>
+<body>
+  <h1>System Architecture</h1>
+  <div class="arch-container">
+    <div class="box">AI Agent</div>
+    <div class="arrow">↓</div>
+    <div class="box" style="border-color: #8b5cf6;">MCP / JSON-RPC</div>
+    <div class="arrow">↓</div>
+    <div class="box">Browser Agent Server</div>
+    <div class="arrow">↓</div>
+    <div class="box layer">
+      TRUST & SAFETY LAYER
+      <div class="layer-items">
+        <span>Adaptive Observation</span>
+        <span>Risk Engine</span>
+        <span>Policy Engine</span>
+        <span>Human Approval</span>
+        <span>Verification Engine</span>
+        <span>Recovery Engine</span>
+        <span>Privacy Shield</span>
+        <span>Prompt Injection Defense</span>
+        <span>Task Memory</span>
+        <span>Audit Logger</span>
+      </div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="box">WebSocket Bridge</div>
+    <div class="arrow">↓</div>
+    <div class="box" style="border-color: #f59e0b;">Chrome Extension</div>
+    <div class="arrow">↓</div>
+    <div class="box">Chrome Browser</div>
+  </div>
+</body>
+</html>

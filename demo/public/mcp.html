@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Remote MCP Connectivity</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 4rem; text-align: center; }
+  h1 { font-size: 3rem; color: #38bdf8; margin-bottom: 3rem; }
+  .mcp-flow { display: flex; justify-content: center; align-items: center; gap: 2rem; flex-wrap: wrap; margin-top: 2rem; }
+  .node { background: #1e293b; border: 2px solid #8b5cf6; border-radius: 12px; padding: 2rem; width: 250px; }
+  .node h3 { margin: 0 0 1rem 0; color: #c4b5fd; font-size: 1.5rem; }
+  .node p { margin: 0; color: #94a3b8; font-size: 1.1rem; line-height: 1.5; }
+  .arrow { font-size: 3rem; color: #64748b; }
+  .note { margin-top: 4rem; color: #cbd5e1; font-size: 1.2rem; font-style: italic; }
+</style>
+</head>
+<body>
+  <h1>Remote MCP Connectivity</h1>
+  <div class="mcp-flow">
+    <div class="node">
+      <h3>MCP-Compatible<br>AI Agent</h3>
+      <p>Standard MCP Client</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="border-color: #10b981;">
+      <h3>Remote MCP</h3>
+      <p>HTTP / SSE<br>Bearer Authentication</p>
+    </div>
+    <div class="arrow">→</div>
+    <div class="node" style="border-color: #3b82f6;">
+      <h3>Browser Agent</h3>
+      <p>Trust Layer &<br>Chrome Extension</p>
+    </div>
+  </div>
+  <p class="note">"Designed for interoperability with MCP-compatible AI agents."</p>
+</body>
+</html>

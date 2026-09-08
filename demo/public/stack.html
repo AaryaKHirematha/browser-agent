@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Technology Stack</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 4rem; }
+  h1 { font-size: 3rem; color: #38bdf8; text-align: center; margin-bottom: 3rem; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; max-width: 1000px; margin: 0 auto; }
+  .card { background: #1e293b; padding: 2rem; border-radius: 12px; border: 1px solid #334155; }
+  .card h3 { color: #fcd34d; font-size: 1.5rem; margin-top: 0; border-bottom: 1px solid #475569; padding-bottom: 0.5rem; }
+  ul { list-style-type: none; padding: 0; margin: 0; }
+  li { padding: 0.5rem 0; font-size: 1.2rem; color: #cbd5e1; display: flex; align-items: center; }
+  li::before { content: "▸"; color: #3b82f6; margin-right: 0.5rem; }
+</style>
+</head>
+<body>
+  <h1>Technology Stack</h1>
+  <div class="grid">
+    <div class="card">
+      <h3>Browser / Frontend</h3>
+      <ul>
+        <li>Google Chrome</li>
+        <li>Chrome Extension Manifest V3</li>
+        <li>HTML / CSS / JavaScript</li>
+        <li>Chrome Extension APIs</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Backend</h3>
+      <ul>
+        <li>Node.js</li>
+        <li>TypeScript</li>
+        <li>HTTP / WebSocket</li>
+        <li>JSON-RPC</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>AI Connectivity</h3>
+      <ul>
+        <li>Model Context Protocol (MCP)</li>
+        <li>Remote MCP Interface</li>
+        <li>HTTP / Server-Sent Events (SSE)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Testing & Tools</h3>
+      <ul>
+        <li>Playwright (E2E Testing & Validation)</li>
+        <li>Deterministic Demo Fixtures</li>
+        <li>npm / Git / GitHub</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

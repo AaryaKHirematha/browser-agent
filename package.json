@@ -15,7 +15,8 @@
     "watch": "node build.mjs --watch",
     "typecheck": "tsc --noEmit",
     "package:ext": "node build.mjs && rm -f browser-agent-extension.zip && cd extension && zip -qr -FS ../browser-agent-extension.zip manifest.json dist -x '*.map' && cd ..",
-    "setup": "npm install && npm run build && npm --prefix agent install && npm --prefix agent run build"
+    "setup": "npm install && npm run build && npm --prefix agent install && npm --prefix agent run build",
+    "demo:record": "node bench/sih-recording.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",

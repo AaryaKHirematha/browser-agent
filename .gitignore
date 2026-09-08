@@ -26,3 +26,11 @@ bench/_tokentest.mjs
 
 # Video artifacts
 *.mp4
+*.webm
+
+# Benchmarks
+bench/results
+bench/raw
+
+# Demo Recordings
+demo-recordings/
