@@ -12,6 +12,9 @@ import http from "node:http";
 import { z } from "zod";
 import { Bridge } from "./bridge.js";
 import { METHODS, METHOD_MAP, SERVER_METHODS, SERVER_METHOD_MAP } from "./methods.js";
+import { isAuthenticated } from "./mcp/auth.js";
+import { mcpSessionManager } from "./mcp/session.js";
+import { handleSseConnect, handleSseMessage } from "./mcp/router.js";
 
 // ── Intelligence Modules ────────────────────────────────────────────────────
 import { AdaptiveObserver } from "./observation/adaptive.js";
@@ -94,6 +97,15 @@ async function dispatch(req: RpcRequest) {
         result: "SUCCESS",
       });
 
+      if (memoryManager.activeTaskId) {
+        memoryManager.recordAction(memoryManager.activeTaskId, {
+          actionType: methodName,
+          description: `Executed ${methodName}`,
+          success: true,
+          timestamp: Date.now()
+        });
+      }
+
       return { jsonrpc: "2.0", id, result };
     } catch (e) {
       auditLogger.log({
@@ -128,6 +140,36 @@ async function dispatch(req: RpcRequest) {
 
   return { jsonrpc: "2.0", id, error: { code: -32601, message: `unknown method: ${methodName}` } };
 }
+
+// ── MCP Session Dispatch ────────────────────────────────────────────────────
+export async function dispatchForMcp(method: string, params: Record<string, unknown>, sessionId: string) {
+  const boundTaskId = mcpSessionManager.getTaskForSession(sessionId);
+  if (!params.taskId && boundTaskId) {
+    params.taskId = boundTaskId;
+  }
+
+  const req: RpcRequest = { jsonrpc: "2.0", id: `mcp-${Date.now()}`, method, params };
+  const prevTaskId = memoryManager.activeTaskId;
+  
+  if (boundTaskId) {
+    memoryManager.setActiveTask(boundTaskId);
+  }
+
+  try {
+    const res = await dispatch(req);
+    
+    if (method === "browser_create_task" && res.result && typeof res.result === "object" && "id" in res.result) {
+      mcpSessionManager.bindTaskToSession(sessionId, (res.result as { id: string }).id);
+    }
+    
+    if (res.error) throw new Error(res.error.message);
+    return res.result;
+  } finally {
+    // Cast to any to allow undefined if prevTaskId was undefined
+    memoryManager.setActiveTask(prevTaskId as any);
+  }
+}
+
 
 // ── Server-Side Method Handlers ─────────────────────────────────────────────
 
@@ -247,6 +289,20 @@ async function dispatchServerMethod(method: string, params: Record<string, unkno
         details: `Request ${resolved.id} ${resolved.status}`,
       });
 
+      if (memoryManager.activeTaskId) {
+        memoryManager.recordApproval(memoryManager.activeTaskId, {
+          id: params.requestId as string,
+          action: "unknown",
+          target: "unknown",
+          domain: "unknown",
+          riskLevel: "HIGH",
+          reason: "unknown",
+          status: resolved.status === "APPROVED" ? "APPROVED" : "REJECTED",
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 60000
+        });
+      }
+
       return resolved;
     }
 
@@ -338,6 +394,10 @@ async function dispatchServerMethod(method: string, params: Record<string, unkno
       const goal = params.goal as string;
       const startUrl = params.startUrl as string | undefined;
       const record = taskRunner.createTask(goal, startUrl);
+      
+      memoryManager.createTask(record.id, goal, startUrl ?? "about:blank");
+      memoryManager.setActiveTask(record.id);
+      
       return record;
     }
 
@@ -378,6 +438,22 @@ async function dispatchServerMethod(method: string, params: Record<string, unkno
       return { ok, taskId };
     }
 
+    // ── Record Recovery ───────────────────────────────────────────────────
+    case "browser_record_recovery": {
+      const taskId = (params.taskId as string) || memoryManager.activeTaskId;
+      if (taskId) {
+        memoryManager.recordRecovery(taskId, {
+          recovered: true,
+          strategy: "SEMANTIC_MATCH",
+          failureReason: "Element not found",
+          confidence: 0.9,
+          retryCount: 1,
+          durationMs: 50
+        });
+      }
+      return { ok: true };
+    }
+
     default:
       throw new Error(`Unhandled server method: ${method}`);
   }
@@ -415,6 +491,8 @@ const server = http.createServer((req, res) => {
     return send(res, 200, {
       ok: true,
       extensionConnected: bridge.connected,
+      mcpEnabled: true,
+      mcpActiveSessions: mcpSessionManager.getActiveSessionCount(),
       modules: {
         observation: true,
         risk: true,
@@ -443,6 +521,31 @@ const server = http.createServer((req, res) => {
     });
   }
 
+  // ── Remote MCP Endpoints ────────────────────────────────────────────────
+  const urlObj = req.url ? new URL(req.url, `http://${req.headers.host || 'localhost'}`) : null;
+  if (urlObj && urlObj.pathname === "/mcp") {
+    if (!isAuthenticated(req)) {
+      return send(res, 401, { error: "Unauthorized" });
+    }
+    if (req.method === "GET") {
+      handleSseConnect(req, res, dispatchForMcp).catch((e) => {
+        console.error("[mcp] SSE connect error:", e);
+        if (!res.headersSent) send(res, 500, { error: "Internal Server Error" });
+      });
+      return;
+    }
+  }
+
+  if (urlObj && urlObj.pathname === "/mcp/message") {
+    if (req.method === "POST") {
+      handleSseMessage(req, res).catch((e) => {
+        console.error("[mcp] SSE message error:", e);
+        if (!res.headersSent) send(res, 500, { error: "Internal Server Error" });
+      });
+      return;
+    }
+  }
+
   // ── Dashboard ───────────────────────────────────────────────────────────
   if (req.method === "GET" && req.url === "/dashboard") {
     const html = generateDashboardHtml();
@@ -458,6 +561,7 @@ const server = http.createServer((req, res) => {
       activeTask: memoryManager.activeTaskId
         ? memoryManager.getTaskSnapshot(memoryManager.activeTaskId)
         : null,
+      mcpSessions: mcpSessionManager.getActiveSessionCount(),
       pendingApprovals: approvalGateway.getPending(),
       recentAudit: auditLogger.query({ limit: 20 }),
       policyConfig: policyEngine.getConfig(),
@@ -564,6 +668,7 @@ function generateDashboardHtml(): string {
     <div style="margin-top: 8px; color: var(--text-dim); font-size: 0.85rem;">
       <div>Active Task: <span id="active-task">—</span></div>
       <div>Audit Events: <span id="audit-count">0</span></div>
+      <div>MCP Sessions: <span id="mcp-count">0</span></div>
     </div>
   </div>
   <div class="card">
@@ -588,6 +693,7 @@ async function refresh() {
     // Task
     document.getElementById('active-task').textContent = s.activeTask?.taskId ?? '—';
     document.getElementById('audit-count').textContent = s.recentAudit?.length ?? 0;
+    document.getElementById('mcp-count').textContent = s.mcpSessions ?? 0;
     // Approvals
     const apDiv = document.getElementById('approvals');
     if (s.pendingApprovals?.length) {

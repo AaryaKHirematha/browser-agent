@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "browser-agent-remote": {
+      "command": "node",
+      "args": ["-e", "/* Claude Desktop primarily uses stdio transport. For local usage, you can still use the local MCP stdio wrapper: */ require('child_process').spawnSync('npx', ['-y', 'browser-agent-server'], {stdio: 'inherit'})"]
+    }
+  }
+}

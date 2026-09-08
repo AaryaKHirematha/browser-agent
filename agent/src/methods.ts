@@ -319,6 +319,13 @@ export const SERVER_METHODS: ServerMethod[] = [
       taskId: z.string().describe("Task ID to resume."),
     },
   },
+  {
+    name: "browser_record_recovery",
+    description: "Record a recovery attempt in the task memory.",
+    shape: {
+      taskId: z.string().optional().describe("Task ID. Uses the active task if not specified."),
+    },
+  },
 ];
 
 export const METHOD_MAP = new Map(METHODS.map((m) => [m.name, m]));

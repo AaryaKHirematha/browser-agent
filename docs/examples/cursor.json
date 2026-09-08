@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "browser-agent": {
+      "url": "http://localhost:8778/mcp",
+      "type": "sse",
+      "headers": {
+        "Authorization": "Bearer your-secure-token-here"
+      }
+    }
+  }
+}

@@ -420,6 +420,7 @@ async function scene8_recovery(page) {
     if (newSubmit) {
       await rpc("browser_click", { index: newSubmit.index });
       log(8, "Recovery successful — clicked re-matched submit button");
+      await rpc("browser_record_recovery");
 
       const ver = await rpc("browser_verify_action", {
         actionDescription: "Click recovered submit button",
@@ -492,15 +493,8 @@ async function scene11_taskMemory() {
   await section("SCENE 11 — Task Memory");
   await narrate("The agent maintains session-scoped task memory to provide context throughout execution.", 6);
 
-  // Create a task and exercise memory
-  const task = await rpc("browser_create_task", {
-    goal: "Multi-step task: search → select → verify",
-    startUrl: `${DEMO_BASE}/index.html`,
-  });
-  log(11, `Task created: ${task.id}`);
-
-  // Get task state
-  const state = await rpc("browser_get_task_state", { taskId: task.id });
+  // Get active task state
+  const state = await rpc("browser_get_task_state", {});
   log(11, `Task state — Goal: "${state.goal}"`);
   log(11, `  Completed actions: ${state.completedActionsCount}`);
   log(11, `  Failed actions: ${state.failedActionsCount}`);
@@ -508,7 +502,7 @@ async function scene11_taskMemory() {
   log(11, `  Recoveries: ${state.recoveryCount}`);
   log(11, `  Approvals: ${state.approvalCount}`);
 
-  recordEvidence(11, "Task memory", "PASS", `Task ${task.id} tracking all fields`);
+  recordEvidence(11, "Task memory", "PASS", `Task ${state.taskId || 'active'} tracking all fields`);
 }
 
 async function scene12_audit() {

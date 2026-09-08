@@ -32,9 +32,11 @@
     "build": "tsc",
     "test": "node test-unit.mjs",
     "test:unit": "node test-unit.mjs",
+    "test:mcp": "node test-mcp.mjs",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "mcp": "node dist/mcp.js",
+    "mcp:doctor": "node scripts/mcp-doctor.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
