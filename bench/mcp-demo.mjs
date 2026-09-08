@@ -85,7 +85,7 @@ async function runDemo() {
       arguments: {
         action: "CLICK",
         description: "Click a standard button",
-        category: "NAVIGATION",
+        category: "NAVIGATE",
         domain: "example.com"
       }
     });
