@@ -137,6 +137,10 @@ export interface UnifiedPerceptionResult extends UnifiedObservation {
     hasCriticalWarning: boolean;
     warnings: string[];
   };
+  /** Real On-Device Vision ML Analysis (SIH 26171). */
+  mlAnalysis?: import("../observation/visual/ml/types.js").VisionMLResult;
+  /** Multi-modal Fusion Metadata (SIH 26171). */
+  fusionMeta?: import("../observation/visual/ml/fusion.js").FusionMetadata;
   /** Whether privacy firewall sanitization was applied to this perception result. */
   sanitized: boolean;
 }

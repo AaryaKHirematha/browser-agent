@@ -39,10 +39,13 @@
     "mcp:doctor": "node scripts/mcp-doctor.mjs",
     "sih:benchmark": "node scripts/sih-benchmark.mjs",
     "test:llm": "node test-llm.mjs",
+    "test:vision-ml": "node test-vision-ml.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "onnxruntime-node": "^1.29.0",
+    "onnxruntime-web": "^1.29.0",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },

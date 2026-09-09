@@ -19,7 +19,8 @@
     "demo:record": "node bench/sih-recording.mjs",
     "sih:benchmark": "node agent/scripts/sih-benchmark.mjs",
     "sih:demo": "node agent/scripts/sih-demo.mjs",
-    "test:llm": "node agent/test-llm.mjs"
+    "test:llm": "node agent/test-llm.mjs",
+    "test:vision-ml": "node agent/test-vision-ml.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
