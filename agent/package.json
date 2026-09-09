@@ -37,6 +37,7 @@
     "dev": "tsx watch src/server.ts",
     "mcp": "node dist/mcp.js",
     "mcp:doctor": "node scripts/mcp-doctor.mjs",
+    "sih:benchmark": "node scripts/sih-benchmark.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

@@ -105,6 +105,37 @@ for (const method of ALL_TOOLS) {
   );
 }
 
+// Prevent process crash if stdout pipe encounters EPIPE when client resets/disconnects stdio
+process.stdout.on("error", (err: unknown) => {
+  const code = (err as { code?: string })?.code;
+  if (code === "EPIPE" || code === "ECONNRESET") {
+    // Ignore pipe closure errors on stdout
+    return;
+  }
+  console.error("[mcp] stdout error:", err);
+});
+
 const transport = new StdioServerTransport();
+
+transport.onclose = () => {
+  console.error("[mcp] stdio transport closed");
+};
+
+transport.onerror = (err) => {
+  console.error("[mcp] transport error:", err);
+};
+
+server.server.onerror = (err) => {
+  console.error("[mcp] server error:", err);
+};
+
+process.on("SIGINT", () => {
+  server.close().then(() => process.exit(0)).catch(() => process.exit(0));
+});
+
+process.on("SIGTERM", () => {
+  server.close().then(() => process.exit(0)).catch(() => process.exit(0));
+});
+
 await server.connect(transport);
 console.error("[mcp] browser-agent MCP server ready (stdio) — Trustworthy Autonomous Browser Agent v0.2.0");

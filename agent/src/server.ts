@@ -28,7 +28,8 @@ import { MemoryManager, generateTaskId } from "./memory/manager.js";
 import { AuditLogger } from "./audit/logger.js";
 import { PromptInjectionDetector } from "./security/injection.js";
 import { TaskRunner } from "./controller/runner.js";
-import type { ActionCategory } from "./types/action.js";
+import { ActionValidator } from "./action/validator.js";
+import type { ActionCategory, ActionProposal, ActionType } from "./types/action.js";
 import type { RiskLevel } from "./types/risk.js";
 import type { PolicyRule } from "./types/policy.js";
 import type { AuditEventType } from "./types/audit.js";
@@ -40,6 +41,7 @@ export const HTTP_PORT = Number(process.env.HTTP_PORT ?? 8778);
 
 const bridge = new Bridge(BRIDGE_PORT);
 const observer = new AdaptiveObserver(bridge);
+const actionValidator = new ActionValidator();
 const riskEngine = new RiskEngine();
 const policyEngine = new PolicyEngine();
 const approvalGateway = new ApprovalGateway();
@@ -81,12 +83,172 @@ async function dispatch(req: RpcRequest) {
     try {
       const tabId = parsed.data.tabId as number | undefined;
 
+      // ── PHASE 8 UNIFIED ACTION SAFETY GATE ──────────────────────────────
+      const actionMap: Record<string, { type: ActionType; category: ActionCategory }> = {
+        browser_click: { type: "CLICK", category: "WRITE" },
+        browser_type: { type: "TYPE", category: "WRITE" },
+        browser_scroll: { type: "SCROLL", category: "READ" },
+        browser_scroll_to: { type: "SCROLL_TO", category: "READ" },
+        browser_navigate: { type: "NAVIGATE", category: "NAVIGATE" },
+        browser_eval: { type: "EVAL", category: "WRITE" },
+      };
+
+      if (methodName in actionMap) {
+        const { type: actionType, category: defaultCategory } = actionMap[methodName];
+        let category = defaultCategory;
+
+        if (methodName === "browser_type" && parsed.data.text && typeof parsed.data.text === "string") {
+          if (privacyShield.isSensitive(parsed.data.text) || /password|secret|key|pwd/i.test(JSON.stringify(parsed.data))) {
+            category = "ACCOUNT_CHANGE";
+          }
+        }
+
+        const proposal: ActionProposal = {
+          type: actionType,
+          index: parsed.data.index as number | undefined,
+          params: parsed.data,
+          description: `Direct action ${methodName}`,
+          category,
+          domain: "active-tab",
+        };
+
+        // 1. Structural Action Validation
+        const validation = actionValidator.validate(proposal);
+        if (!validation.allowed) {
+          auditLogger.log({
+            type: "ACTION_FAILED",
+            taskId: memoryManager.activeTaskId,
+            action: methodName,
+            details: `Action validation failed: ${validation.reason}`,
+            result: "FAILURE",
+          });
+          return {
+            jsonrpc: "2.0",
+            id,
+            error: { code: -32000, message: `ACTION_VALIDATION_FAILED: ${validation.reason}` },
+          };
+        }
+
+        // 2. Risk Assessment
+        const risk = riskEngine.assess(proposal);
+
+        // 3. Policy Check
+        const policyDecision = policyEngine.evaluate(proposal, risk);
+        if (policyDecision.action === "DENY") {
+          auditLogger.log({
+            type: "POLICY_EVALUATED",
+            taskId: memoryManager.activeTaskId,
+            action: methodName,
+            details: `Policy denied action: ${policyDecision.reason}`,
+            result: "FAILURE",
+          });
+          return {
+            jsonrpc: "2.0",
+            id,
+            error: { code: -32000, message: `POLICY_DENIED: ${policyDecision.reason}` },
+          };
+        }
+
+        // 4. Human Approval Gate
+        if (policyDecision.action === "REQUIRE_APPROVAL" || risk.approvalRequired) {
+          const providedApprovalId = parsed.data.approvalId as string | undefined;
+          if (providedApprovalId) {
+            const req = approvalGateway.get(providedApprovalId);
+            if (!req || req.status !== "APPROVED") {
+              return {
+                jsonrpc: "2.0",
+                id,
+                error: {
+                  code: -32000,
+                  message: `APPROVAL_REQUIRED: Approval '${providedApprovalId}' is invalid, expired, or not approved.`,
+                },
+              };
+            }
+            // Bind approval to exact action/target
+            const expectedTarget = proposal.description;
+            if (req.action !== expectedTarget && req.target !== expectedTarget) {
+              return {
+                jsonrpc: "2.0",
+                id,
+                error: {
+                  code: -32000,
+                  message: `APPROVAL_MISMATCH: Approval '${providedApprovalId}' was issued for '${req.action}', not '${expectedTarget}'.`,
+                },
+              };
+            }
+            // Single-use consumption: mark as consumed to prevent replay
+            (req as any).status = "CONSUMED";
+          } else {
+            const appReq = approvalGateway.request({
+              action: proposal.description,
+              target: proposal.description,
+              domain: proposal.domain,
+              riskLevel: risk.level,
+              reason: policyDecision.reason || risk.reason,
+            });
+
+            auditLogger.log({
+              type: "APPROVAL_REQUESTED",
+              taskId: memoryManager.activeTaskId,
+              action: methodName,
+              details: `Approval required (${appReq.id}): ${risk.reason}`,
+              riskLevel: risk.level,
+            });
+
+            return {
+              jsonrpc: "2.0",
+              id,
+              error: {
+                code: -32000,
+                message: `APPROVAL_REQUIRED: Action ${methodName} requires explicit human approval (${appReq.id})`,
+              },
+            };
+          }
+        }
+      }
+
       // Take a pre-action snapshot for verification (for mutating actions)
       if (["browser_click", "browser_type", "browser_navigate"].includes(methodName)) {
         try { lastSnapshot = await verificationEngine.snapshot(); } catch { /* best effort */ }
       }
 
-      const result = await bridge.send(bridgeMethod.toCommand(parsed.data), tabId);
+      let result = await bridge.send(bridgeMethod.toCommand(parsed.data), tabId);
+
+      // Preprocess browser_screenshot through local Privacy Firewall before AI exposure
+      if (methodName === "browser_screenshot" && result && typeof result === "object" && "screenshot" in result) {
+        const rawObj = result as { screenshot?: string; width?: number; height?: number; ok?: boolean };
+        if (rawObj.screenshot) {
+          try {
+            const perception = await observer.perceive({ forceMode: "VISUAL", includeScreenshot: false });
+            const sanitizedPerception = privacyShield.sanitizePerception({
+              ...perception,
+              screenshot: rawObj.screenshot,
+            });
+            if (sanitizedPerception.screenshot) {
+              result = {
+                ok: true,
+                screenshot: sanitizedPerception.screenshot,
+                width: rawObj.width,
+                height: rawObj.height,
+                sanitized: true,
+                protectedRegions: sanitizedPerception.sensitiveDataSummary?.redactedCount ?? 0,
+              };
+            } else {
+              return {
+                jsonrpc: "2.0",
+                id,
+                error: { code: -32000, message: "SCREENSHOT_PRIVACY_PROCESSING_FAILED" },
+              };
+            }
+          } catch {
+            return {
+              jsonrpc: "2.0",
+              id,
+              error: { code: -32000, message: "SCREENSHOT_PRIVACY_PROCESSING_FAILED" },
+            };
+          }
+        }
+      }
 
       // Audit bridge actions
       auditLogger.log({

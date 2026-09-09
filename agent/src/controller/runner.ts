@@ -13,6 +13,7 @@ import { PromptInjectionDetector } from "../security/injection.js";
 import { MemoryManager } from "../memory/manager.js";
 import { AuditLogger } from "../audit/logger.js";
 import { Bridge } from "../bridge.js";
+import { ActionValidator } from "../action/validator.js";
 import { ActionProposal } from "../types/index.js";
 
 export interface TaskRecord {
@@ -47,9 +48,11 @@ export class TaskRunner {
   public readonly privacyShield: PrivacyShield;
   public readonly injectionDetector: PromptInjectionDetector;
   public readonly memoryManager: MemoryManager;
+  public readonly actionValidator: ActionValidator;
   public readonly auditLogger: AuditLogger;
 
   constructor(private bridge: Bridge) {
+    this.actionValidator = new ActionValidator();
     this.auditLogger = new AuditLogger();
     this.memoryManager = new MemoryManager();
     this.privacyShield = new PrivacyShield();
@@ -203,56 +206,94 @@ export class TaskRunner {
       return { state: record.state };
     }
 
-    // 2. DECIDE -> RISK ASSESSMENT
-    record.stateMachine.transitionTo("RISK_ASSESSING");
-    record.state = record.stateMachine.state;
-    const riskAssessment = this.riskEngine.assess(actionProposal);
+    let riskAssessment = this.riskEngine.assess(actionProposal);
 
-    // 3. POLICY CHECK
-    record.stateMachine.transitionTo("POLICY_CHECKING");
-    record.state = record.stateMachine.state;
-    const policyDecision = this.policyEngine.evaluate(actionProposal, riskAssessment);
+    // If state is not already EXECUTING (e.g. resumed after human approval), run safety pipeline
+    if (record.state !== "EXECUTING") {
+      // 1.5 STRUCTURAL ACTION VALIDATION
+      const validation = this.actionValidator.validate(actionProposal);
+      if (!validation.allowed) {
+        record.stateMachine.transitionTo("FAILED");
+        record.state = record.stateMachine.state;
+        this.auditLogger.log({
+          taskId,
+          type: "ACTION_FAILED",
+          domain: actionProposal.domain || "unknown",
+          details: `Action validation failed: ${validation.reason}`,
+          result: "FAILURE",
+        });
+        return { state: record.state, error: `Action validation failed: ${validation.reason}` };
+      }
 
-    if (policyDecision.action === "DENY") {
-      record.stateMachine.transitionTo("FAILED");
-      record.state = record.stateMachine.state;
-      this.auditLogger.log({
-        taskId,
-        type: "POLICY_EVALUATED",
-        domain: actionProposal.domain,
-        details: `Policy denied action: ${policyDecision.reason}`,
-        riskLevel: riskAssessment.level,
-      });
-      return { state: record.state, error: policyDecision.reason };
-    }
+      // 2. DECIDE -> RISK ASSESSMENT
+      if (record.state === "DECIDING") {
+        record.stateMachine.transitionTo("RISK_ASSESSING");
+        record.state = record.stateMachine.state;
+      }
+      riskAssessment = this.riskEngine.assess(actionProposal);
 
-    // 4. APPROVAL IF REQUIRED
-    if (policyDecision.action === "REQUIRE_APPROVAL" || riskAssessment.approvalRequired) {
-      record.stateMachine.transitionTo("WAITING_FOR_APPROVAL");
-      record.state = record.stateMachine.state;
-      const appReq = this.approvalGateway.request({
-        action: actionProposal.description,
-        target: actionProposal.description,
-        domain: actionProposal.domain,
-        riskLevel: riskAssessment.level,
-        reason: policyDecision.reason || riskAssessment.reason,
-      });
-      record.pendingApprovalId = appReq.id;
+      // 3. POLICY CHECK
+      if (record.state === "RISK_ASSESSING") {
+        record.stateMachine.transitionTo("POLICY_CHECKING");
+        record.state = record.stateMachine.state;
+      }
+      const policyDecision = this.policyEngine.evaluate(actionProposal, riskAssessment);
 
-      this.auditLogger.log({
-        taskId,
-        type: "APPROVAL_REQUESTED",
-        domain: actionProposal.domain,
-        details: `Human approval requested for high-risk action: ${actionProposal.description}`,
-        riskLevel: riskAssessment.level,
-      });
+      if (policyDecision.action === "DENY") {
+        record.stateMachine.transitionTo("FAILED");
+        record.state = record.stateMachine.state;
+        this.auditLogger.log({
+          taskId,
+          type: "POLICY_EVALUATED",
+          domain: actionProposal.domain,
+          details: `Policy denied action: ${policyDecision.reason}`,
+          riskLevel: riskAssessment.level,
+        });
+        return { state: record.state, error: policyDecision.reason };
+      }
 
-      return { state: record.state, approvalRequired: true, approvalId: appReq.id };
+      // 4. APPROVAL IF REQUIRED
+      if (policyDecision.action === "REQUIRE_APPROVAL" || riskAssessment.approvalRequired) {
+        record.stateMachine.transitionTo("WAITING_FOR_APPROVAL");
+        record.state = record.stateMachine.state;
+        const appReq = this.approvalGateway.request({
+          action: actionProposal.description,
+          target: actionProposal.description,
+          domain: actionProposal.domain,
+          riskLevel: riskAssessment.level,
+          reason: policyDecision.reason || riskAssessment.reason,
+        });
+        record.pendingApprovalId = appReq.id;
+        (record as any).pendingProposal = actionProposal;
+
+        this.auditLogger.log({
+          taskId,
+          type: "APPROVAL_REQUESTED",
+          domain: actionProposal.domain,
+          details: `Human approval requested for high-risk action: ${actionProposal.description}`,
+          riskLevel: riskAssessment.level,
+        });
+
+        return { state: record.state, approvalRequired: true, approvalId: appReq.id };
+      }
     }
 
     // 5. EXECUTE
-    record.stateMachine.transitionTo("EXECUTING");
-    record.state = record.stateMachine.state;
+    if (record.state !== "EXECUTING") {
+      record.stateMachine.transitionTo("EXECUTING");
+      record.state = record.stateMachine.state;
+    }
+
+    // Verify proposal matching if resuming after approval
+    if ((record as any).pendingProposal) {
+      const approvedProp = (record as any).pendingProposal;
+      (record as any).pendingProposal = undefined;
+      if (actionProposal.type !== approvedProp.type || actionProposal.domain !== approvedProp.domain) {
+        record.stateMachine.transitionTo("FAILED");
+        record.state = record.stateMachine.state;
+        return { state: record.state, error: "APPROVAL_MISMATCH: Action proposal does not match approved proposal" };
+      }
+    }
 
     // Snapshot state before action for verification
     const beforeState: any = await this.bridge.send({ type: "GET_STATE" }).catch(() => null);

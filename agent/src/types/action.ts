@@ -59,3 +59,20 @@ export interface ActionResult {
   /** Duration of execution in ms. */
   durationMs: number;
 }
+
+/** Result of local action validation before execution. */
+export interface ActionValidationResult {
+  /** Whether the action passes local validation checks. */
+  allowed: boolean;
+  /** Reason if validation failed or flagged warnings. */
+  reason?: string;
+  /** List of validation warnings. */
+  warnings?: string[];
+  /** Sanitized/validated action parameters. */
+  sanitizedParams?: Record<string, unknown>;
+  /** Whether security warnings dictate escalating risk/requiring approval. */
+  requiresEscalation?: boolean;
+  /** Suggested risk level after validation. */
+  suggestedRiskLevel?: string;
+}
+

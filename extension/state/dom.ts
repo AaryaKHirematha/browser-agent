@@ -31,13 +31,18 @@ export function extractState(): { state: PageState; nodes: Element[] } {
     seen.add(el);
 
     const rect = getRect(el);
+    const typeAttr = (el.getAttribute("type") || "").toLowerCase();
+    const isPasswordType = typeAttr === "password" || role(el) === "password";
+    const rawValue = (el as HTMLInputElement).value ?? null;
+    const value = isPasswordType ? "[PASSWORD_REDACTED]" : rawValue;
+
     elements.push({
       index,
       tag: el.tagName.toLowerCase(),
       role: role(el),
       type: el.getAttribute("type"),
-      text: accessibleText(el),
-      value: (el as HTMLInputElement).value ?? null,
+      text: isPasswordType ? "[PASSWORD_REDACTED]" : accessibleText(el),
+      value,
       placeholder: el.getAttribute("placeholder"),
       ariaLabel: el.getAttribute("aria-label"),
       href: (el as HTMLAnchorElement).href || null,

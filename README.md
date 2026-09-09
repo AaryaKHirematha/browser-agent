@@ -15,6 +15,33 @@ that measures what it costs to feed a page to an LLM.
 > to understand *how observation representation affects cost*, read the
 > [benchmark writeup](docs/observation-benchmark.md).
 
+---
+
+## 🚀 SIH Problem Statement 26171 — ISRO / Department of Space
+
+**Title**: On-device Visual Perception for Light-weight Browser Agents  
+**Organization**: Indian Space Research Organisation (ISRO) / Department of Space  
+**Category**: Software | **Theme**: Smart Automation  
+
+This repository contains the complete judge-ready prototype for **SIH 26171**. It features:
+- **On-Device Local Visual Perception**: Client-side DOM geometry & canvas layout parsing (`DETERMINISTIC_FALLBACK`).
+- **Pre-Network Privacy Boundary**: Dynamic PII detection (12 sensitive categories) & `#0f0f13` solid-fill canvas pixel redaction before network transmission (`ws://localhost:8777`).
+- **Trust & Safety Action Gate**: Multi-stage action verification pipeline (`ActionValidator` → `RiskEngine` → `PolicyEngine` → `ApprovalGateway`).
+- **Remote MCP Server**: 30 tools exposed over HTTP/SSE with Bearer authentication for Claude Desktop & AI Agents.
+
+### 📜 SIH Benchmark & Judge Demonstration Commands
+```bash
+# Setup & Build repository
+npm run setup
+
+# Run 100-Iteration High-Resolution SIH Benchmark Suite
+npm run sih:benchmark
+
+# Run Automated Reproducible Judge Demonstration (5 Core Scenarios)
+npm run sih:demo
+```
+For complete technical details, pre-network privacy proofs, and evaluation matrices, see [SIH_26171_DOCUMENTATION.md](file:///d:/browser-agent/SIH_26171_DOCUMENTATION.md).
+
 ```
    any agent
    ├── speaks MCP ──▶ mcp.js (stdio) ─┐

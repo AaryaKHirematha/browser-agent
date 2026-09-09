@@ -13,10 +13,28 @@ const serverPath = fileURLToPath(new URL("./dist/server.js", import.meta.url));
 async function runTests() {
   console.log("🛡️ Running Remote MCP Unit Tests\n");
 
-  const server = spawn("node", [serverPath], { env: process.env, stdio: "ignore" });
+  const server = spawn("node", [serverPath], { env: process.env, stdio: "inherit" });
 
-  // Wait for server to start
-  await new Promise(r => setTimeout(r, 1000));
+  // Wait for server to start by polling /health
+  let connected = false;
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 200));
+    try {
+      await new Promise((resolve, reject) => {
+        const req = http.get(`http://localhost:${PORT}/health`, (res) => {
+          if (res.statusCode === 200) resolve();
+          else reject(new Error(`Status ${res.statusCode}`));
+        });
+        req.on("error", reject);
+        req.end();
+      });
+      connected = true;
+      break;
+    } catch {
+      // keep retrying
+    }
+  }
+  if (!connected) throw new Error("Server failed to start on port " + PORT);
 
   try {
     // Test A: Health endpoint
@@ -101,6 +119,30 @@ async function runTests() {
       req.end();
     });
     console.log("  ✓ MCP Message routing functional");
+
+    // Test G: browser_screenshot JSON-RPC endpoint privacy preprocessing
+    await new Promise((resolve, reject) => {
+      const req = http.request(`http://localhost:${PORT}/rpc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      }, (res) => {
+        let body = "";
+        res.on("data", chunk => body += chunk);
+        res.on("end", () => {
+          const json = JSON.parse(body);
+          // If no extension is connected, it returns RPC error -32000 bridge disconnected
+          // Crucially, it must NEVER leak un-sanitized raw screenshots in errors or responses
+          assert.ok(!body.includes("rawScreenshot"), "RPC response must never contain rawScreenshot field");
+          if (json.error) {
+            assert.ok(!json.error.message.includes("data:image"), "Error message must never contain base64 image data");
+          }
+          resolve();
+        });
+      }).on("error", reject);
+      req.write(JSON.stringify({ jsonrpc: "2.0", id: 3, method: "browser_screenshot", params: {} }));
+      req.end();
+    });
+    console.log("  ✓ browser_screenshot RPC response privacy & non-leakage verified");
 
     console.log("\n✨ All MCP tests passed successfully!");
   } finally {

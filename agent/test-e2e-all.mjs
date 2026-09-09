@@ -301,6 +301,61 @@ async function runE2ETests() {
     console.log(`\n    📊 Benchmark Metrics: Total Task Latency: ${totalMs}ms | Audit Events: ${auditEvents}`);
   });
 
+  // ── PHASE 10: End-to-End Integration & Pre-Network Privacy Verification ──────
+  await test("Phase 10: Full End-to-End Integration & Pre-Network Privacy Boundary Verification", async () => {
+    const shield = new PrivacyShield();
+    const sensitivePerception = {
+      meta: { mode: "HYBRID", url: "https://isro.gov.in/portal" },
+      page: { url: "https://isro.gov.in/portal", title: "ISRO Portal" },
+      elements: [
+        { index: 0, role: "heading", text: "Welcome to ISRO Portal", visible: true, enabled: true, editable: false },
+        { index: 1, role: "textbox", text: "EMAIL_TEST_123@example.com", label: "Email", visible: true, enabled: true, editable: true },
+        { index: 2, role: "password", text: "DEMO_PASSWORD_123", label: "Password", visible: true, enabled: true, editable: true },
+        { index: 3, role: "textbox", text: "4111 1111 1111 1111", label: "Card", visible: true, enabled: true, editable: true },
+        { index: 4, role: "textbox", text: "123-45-6789", label: "SSN", visible: true, enabled: true, editable: true },
+        { index: 5, role: "text", text: "sk-live-isro-secret-key-1234567890", label: "ApiKey", visible: true, enabled: true, editable: false },
+        { index: 6, role: "button", text: "Learn More", visible: true, enabled: true, editable: false },
+      ],
+      graphText: "root\n  heading: Welcome to ISRO Portal\n  text: sk-live-isro-secret-key-1234567890",
+      interactiveCount: 7,
+    };
+
+    // 1. Sanitize context locally before outbound transmission
+    const sanitized = shield.sanitizePerception(sensitivePerception);
+    const serializedOutbound = JSON.stringify(sanitized);
+
+    // 2. Assert raw synthetic PII markers are 100% absent in outbound network context
+    assert.ok(!serializedOutbound.includes("EMAIL_TEST_123@example.com"), "Raw email must be absent in outbound context");
+    assert.ok(!serializedOutbound.includes("DEMO_PASSWORD_123"), "Raw password must be absent in outbound context");
+    assert.ok(!serializedOutbound.includes("4111 1111 1111 1111"), "Raw credit card must be absent in outbound context");
+    assert.ok(!serializedOutbound.includes("123-45-6789"), "Raw SSN must be absent in outbound context");
+    assert.ok(!serializedOutbound.includes("sk-live-isro-secret-key-1234567890"), "Raw API key must be absent in outbound context");
+
+    // 3. Assert safe context elements are preserved
+    assert.ok(serializedOutbound.includes("Welcome to ISRO Portal"), "Safe heading must survive privacy filtering");
+    assert.ok(serializedOutbound.includes("Learn More"), "Safe button text must survive privacy filtering");
+
+    // 4. Verify TaskRunner closed-loop integration with Action Gate
+    const mockBridge = new MockBridge();
+    const runner = new TaskRunner(mockBridge);
+    const task = runner.createTask("Phase 10 Natural Task", "https://isro.gov.in/portal");
+    
+    // Step 1: Observe & Decide
+    await runner.stepTask(task.id);
+    
+    // Step 2: Propose safe click action
+    const res = await runner.stepTask(task.id, {
+      type: "CLICK",
+      description: "Click Learn More button",
+      category: "READ",
+      domain: "isro.gov.in",
+      params: { index: 6 },
+    });
+
+    assert.equal(res.actionExecuted, true);
+    assert.equal(res.verificationResult.status, "VERIFIED_SUCCESS");
+  });
+
   console.log(`\n\x1b[32m✨ All ${passed}/${total} E2E Integration & Validation scenarios passed successfully!\x1b[0m\n`);
 }
 

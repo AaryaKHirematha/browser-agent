@@ -77,3 +77,67 @@ export interface UnifiedObservation {
   /** Whether the observation was truncated. */
   truncated: boolean;
 }
+
+/** Result of local visual analysis on page layout and structure. */
+export interface VisualAnalysisResult {
+  /** Confidence in the visual analysis (0-1). */
+  confidence: number;
+  /** Status of local visual analyzer. */
+  analyzerStatus: "ENABLED" | "DISABLED_FALLBACK" | "OPTIONAL_UNAVAILABLE";
+  /** Layout blocks detected on page. */
+  detectedRegions?: Array<{
+    id: string;
+    role: string;
+    bounds: { x: number; y: number; width: number; height: number };
+    confidence: number;
+  }>;
+  /** Visual ambiguity score (0 = clear layout, 1 = high overlap/ambiguity). */
+  visualAmbiguityScore?: number;
+  /** Bounding boxes of visual elements containing sensitive input types. */
+  sensitiveVisualRegions?: Array<{
+    type: string;
+    bounds: { x: number; y: number; width: number; height: number };
+  }>;
+  /** SIH 26171 On-Device Local Vision Model Metadata. */
+  modelMetadata?: {
+    modelName: string;
+    modelFormat: string;
+    runtime: "WEBGPU" | "WASM" | "HYBRID_LOCAL" | "DETERMINISTIC";
+    backend: string;
+    modelSizeBytes: number;
+    initLatencyMs: number;
+    inferenceLatencyMs: number;
+    memoryUsageMB?: number;
+    fallbackActive: boolean;
+  };
+  /** Spatial relationships between detected visual regions. */
+  spatialRelationships?: Array<{
+    sourceId: string;
+    targetId: string;
+    relation: "ABOVE" | "BELOW" | "INSIDE" | "ADJACENT_LEFT" | "ADJACENT_RIGHT";
+  }>;
+}
+
+/** Complete normalized representation returned by the Unified Perception Layer. */
+export interface UnifiedPerceptionResult extends UnifiedObservation {
+  /** Local visual analysis metrics (if visual analysis ran or fell back). */
+  visualAnalysis?: VisualAnalysisResult;
+  /** Unified perception confidence score (0-1). */
+  perceptionConfidence: number;
+  /** Summary of sensitive data findings & redaction status from Privacy Firewall. */
+  sensitiveDataSummary?: {
+    detectedCount: number;
+    redactedCount: number;
+    typesFound: string[];
+    privacyPolicyApplied: string;
+  };
+  /** Security & prompt injection findings. */
+  securitySummary?: {
+    injectionsDetected: number;
+    hasCriticalWarning: boolean;
+    warnings: string[];
+  };
+  /** Whether privacy firewall sanitization was applied to this perception result. */
+  sanitized: boolean;
+}
+

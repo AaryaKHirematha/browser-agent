@@ -110,6 +110,7 @@ export type Message =
   | { type: "GET_UI_GRAPH" }
   | { type: "GRAPH_DELTA" }
   | { type: "DOM_STATS" }
+  | { type: "FIND_SENSITIVE_BOUNDS" }
   | { type: "PING" };
 
 function handle(msg: Message): unknown {
@@ -164,6 +165,28 @@ function handle(msg: Message): unknown {
           innerTextChars: text,
         },
       };
+    }
+    case "FIND_SENSITIVE_BOUNDS": {
+      const sensitive: Array<{ x: number; y: number; width: number; height: number; type: string }> = [];
+      const elements = document.querySelectorAll("input, textarea, [contenteditable='true']");
+      elements.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const rect = htmlEl.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const typeAttr = (htmlEl.getAttribute("type") || "").toLowerCase();
+        const nameAttr = (htmlEl.getAttribute("name") || "").toLowerCase();
+        const idAttr = (htmlEl.getAttribute("id") || "").toLowerCase();
+        if (typeAttr === "password" || /password|card|ssn|secret|key|token/i.test(`${nameAttr} ${idAttr}`)) {
+          sensitive.push({
+            x: Math.round(rect.left + window.scrollX),
+            y: Math.round(rect.top + window.scrollY),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            type: typeAttr === "password" ? "PASSWORD" : "PII",
+          });
+        }
+      });
+      return { ok: true, sensitive };
     }
     default:
       return { ok: false, error: `unknown message: ${(msg as { type: string }).type}` };

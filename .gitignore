@@ -34,3 +34,4 @@ bench/raw
 
 # Demo Recordings
 demo-recordings/
+.chrome-profile/

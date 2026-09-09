@@ -8,6 +8,7 @@
 //      listen for connections, so it dials the server and reconnects forever.
 
 import type { Message } from "./content";
+import { BrowserPrivacyFilter, type SensitiveBounds } from "./privacy";
 
 const BRIDGE_URL = "ws://localhost:8777";
 const RECONNECT_MS = 2000;
@@ -76,7 +77,29 @@ export async function runCommand(cmd: Command, tabId?: number): Promise<unknown>
     });
     // Strip the data:image/png;base64, prefix
     const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
-    return { ok: true, screenshot: base64, width: tab.width, height: tab.height };
+
+    // ── SIH 26171 PRE-NETWORK PRIVACY BOUNDARY ──────────────────────────
+    // Query DOM sensitive bounds from top frame and sanitize screenshot BEFORE network transmission
+    let sanitizedBase64 = base64;
+    let redactedCount = 0;
+    try {
+      await ensureContentScript(id);
+      const resp = (await chrome.tabs.sendMessage(id, { type: "FIND_SENSITIVE_BOUNDS" }, { frameId: 0 })) as { sensitive?: SensitiveBounds[] } | undefined;
+      if (resp?.sensitive && Array.isArray(resp.sensitive) && resp.sensitive.length > 0) {
+        const result = await BrowserPrivacyFilter.sanitizeScreenshotData(base64, resp.sensitive);
+        sanitizedBase64 = result.sanitizedBase64;
+        redactedCount = result.redactedCount;
+      }
+    } catch { /* best effort local extraction */ }
+
+    return {
+      ok: true,
+      screenshot: sanitizedBase64,
+      width: tab.width,
+      height: tab.height,
+      clientSanitized: true,
+      clientRedactedCount: redactedCount,
+    };
   }
 
   if (cmd.type === "EVAL") {

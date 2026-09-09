@@ -9,8 +9,11 @@ import type {
   ObservationMeta,
   UnifiedObservation,
   UnifiedElement,
+  UnifiedPerceptionResult,
+  VisualAnalysisResult,
 } from "../types/observation.js";
 import type { Bridge } from "../bridge.js";
+import { LocalVisualAnalyzer } from "./visual/analyzer.js";
 
 /** Hints that help the adaptive observer choose a mode. */
 export interface ObserveHints {
@@ -31,7 +34,11 @@ export interface ObserveHints {
 }
 
 export class AdaptiveObserver {
+  private localVisualAnalyzer = new LocalVisualAnalyzer();
+
   constructor(private bridge: Bridge) {}
+
+
 
   /** Produce a unified observation, auto-selecting the best mode. */
   async observe(hints: ObserveHints = {}): Promise<UnifiedObservation> {
@@ -145,6 +152,12 @@ export class AdaptiveObserver {
           break;
         }
       }
+
+      if (hints.includeScreenshot && !screenshot) {
+        try {
+          screenshot = await this.captureScreenshot();
+        } catch { /* screenshot is optional */ }
+      }
     } catch (err) {
       // Fallback: try the simplest possible observation
       try {
@@ -179,6 +192,92 @@ export class AdaptiveObserver {
       truncated,
     };
   }
+
+  /**
+   * Produce a normalized UnifiedPerceptionResult combining state, graph, graph delta,
+   * screenshot, confidence metrics, and observation metadata.
+   * Additive method over observe() for multi-modal perception callers.
+   */
+  async perceive(hints: ObserveHints = {}): Promise<UnifiedPerceptionResult> {
+    try {
+      const baseObs = await this.observe(hints);
+
+      // Calculate perception confidence score based on element richness and observation completeness
+      let confidence = baseObs.meta.rationale.confidence ?? 0.8;
+      if (!baseObs.page.url && baseObs.elements.length === 0) {
+        confidence = 0.1;
+      } else {
+        if (baseObs.elements.length === 0) {
+          confidence = Math.max(0.3, confidence - 0.3);
+        }
+        if (baseObs.truncated) {
+          confidence = Math.max(0.4, confidence - 0.1);
+        }
+        if ((baseObs.meta.mode === "VISUAL" || baseObs.meta.mode === "HYBRID" || hints.includeScreenshot) && !baseObs.screenshot) {
+          confidence = Math.max(0.4, confidence - 0.2);
+        }
+      }
+
+      let visualAnalysis: VisualAnalysisResult | undefined;
+      const isVisualMode = baseObs.meta.mode === "VISUAL" || baseObs.meta.mode === "HYBRID" || hints.includeScreenshot;
+      if (isVisualMode) {
+        try {
+          visualAnalysis = this.localVisualAnalyzer.analyze({
+            elements: baseObs.elements,
+            viewportSize: baseObs.page.viewportSize,
+            scrollPosition: baseObs.page.scrollPosition,
+            screenshot: baseObs.screenshot,
+          });
+        } catch {
+          visualAnalysis = {
+            confidence: 0,
+            analyzerStatus: "DISABLED_FALLBACK",
+            visualAmbiguityScore: 1.0,
+            detectedRegions: [],
+            sensitiveVisualRegions: [],
+          };
+        }
+      }
+
+      return {
+        ...baseObs,
+        visualAnalysis,
+        perceptionConfidence: Number(confidence.toFixed(2)),
+        sanitized: false,
+      };
+
+
+    } catch (err) {
+      // Safe fallback perception when bridge fails completely
+      const now = Date.now();
+      return {
+        meta: {
+          mode: hints.forceMode ?? "STATE",
+          rationale: { mode: hints.forceMode ?? "STATE", reason: `Bridge error fallback: ${err instanceof Error ? err.message : String(err)}`, confidence: 0.1 },
+          timestamp: now,
+          sizeChars: 0,
+          estimatedTokens: 0,
+          latencyMs: 0,
+          url: "",
+          title: "Observation Failure Fallback",
+        },
+        elements: [],
+        page: {
+          url: "",
+          title: "Observation Failure Fallback",
+          scrollPosition: { x: 0, y: 0 },
+          viewportSize: { width: 0, height: 0 },
+          atTop: true,
+          atBottom: false,
+        },
+        interactiveCount: 0,
+        truncated: false,
+        perceptionConfidence: 0.1,
+        sanitized: false,
+      };
+    }
+  }
+
 
   /** Determine the best observation mode. */
   private selectMode(hints: ObserveHints): ObservationRationale {
