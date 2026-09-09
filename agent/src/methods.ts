@@ -326,6 +326,16 @@ export const SERVER_METHODS: ServerMethod[] = [
       taskId: z.string().optional().describe("Task ID. Uses the active task if not specified."),
     },
   },
+  {
+    name: "browser_run_llm_task",
+    description:
+      "Run an autonomous natural language browser task driven by a real or mock LLM agent. Observes current browser state, applies local visual perception, enforces pre-network privacy sanitization, scans for prompt injection, executes structured actions through the Trust & Safety action gate, and returns step-by-step progress and final answer.",
+    shape: {
+      prompt: z.string().describe("Natural language browser task prompt (e.g. 'Go to Wikipedia and find when Apollo 11 landed')."),
+      maxSteps: z.number().int().optional().describe("Maximum allowed autonomous steps (default 10)."),
+      tabId,
+    },
+  },
 ];
 
 export const METHOD_MAP = new Map(METHODS.map((m) => [m.name, m]));

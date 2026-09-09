@@ -62,7 +62,7 @@ export function classifyFailure(error: Error): FailureClassification {
 }
 
 export class RecoveryEngine {
-  constructor(private bridge: Bridge) {}
+  constructor(private bridge?: Bridge) {}
 
   /** Attempt to recover from a failed action. */
   async recover(params: {
@@ -102,6 +102,10 @@ export class RecoveryEngine {
         }
 
         if (strategy === "RE_OBSERVE" || strategy === "SEMANTIC_MATCH") {
+          if (!this.bridge || !this.bridge.connected) {
+            strategy = "ABORT";
+            break;
+          }
           // Re-observe the page
           const state = await this.bridge.send({ type: "GET_STATE" }) as {
             elements?: Array<{
@@ -150,8 +154,10 @@ export class RecoveryEngine {
 
         if (strategy === "SCROLL_AND_FIND") {
           // Scroll down to find the target
-          await this.bridge.send({ type: "SCROLL", direction: "down" });
-          await this.wait(300);
+          if (this.bridge && this.bridge.connected) {
+            await this.bridge.send({ type: "SCROLL", direction: "down" });
+            await this.wait(300);
+          }
           strategy = "SEMANTIC_MATCH";
           continue;
         }

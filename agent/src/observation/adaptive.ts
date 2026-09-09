@@ -36,7 +36,7 @@ export interface ObserveHints {
 export class AdaptiveObserver {
   private localVisualAnalyzer = new LocalVisualAnalyzer();
 
-  constructor(private bridge: Bridge) {}
+  constructor(private bridge?: Bridge) {}
 
 
 
@@ -95,6 +95,7 @@ export class AdaptiveObserver {
           break;
         }
         case "GRAPH_DELTA": {
+          if (!this.bridge || !this.bridge.connected) break;
           const delta = await this.bridge.send({ type: "GRAPH_DELTA" }) as unknown[];
           graphDelta = delta;
           sizeChars = JSON.stringify(delta).length;
@@ -343,11 +344,13 @@ export class AdaptiveObserver {
   // ── Bridge Helpers ────────────────────────────────────────────────────────
 
   private async getState(): Promise<Record<string, any>> {
+    if (!this.bridge || !this.bridge.connected) return {};
     const result = await this.bridge.send({ type: "GET_STATE" });
     return (result as Record<string, any>) ?? {};
   }
 
   private async getGraph(query?: string, maxNodes?: number): Promise<Record<string, any>> {
+    if (!this.bridge || !this.bridge.connected) return {};
     const result = await this.bridge.send({
       type: "GET_GRAPH",
       query,
@@ -357,6 +360,7 @@ export class AdaptiveObserver {
   }
 
   private async captureScreenshot(): Promise<string> {
+    if (!this.bridge || !this.bridge.connected) return "";
     const result = await this.bridge.send({ type: "SCREENSHOT" });
     return (result as { screenshot?: string })?.screenshot ?? "";
   }

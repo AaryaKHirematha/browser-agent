@@ -14,10 +14,13 @@ export interface PageSnapshot {
 }
 
 export class VerificationEngine {
-  constructor(private bridge: Bridge) {}
+  constructor(private bridge?: Bridge) {}
 
   /** Take a lightweight page snapshot for comparison. */
   async snapshot(): Promise<PageSnapshot> {
+    if (!this.bridge || !this.bridge.connected) {
+      return { url: "", title: "", elementCount: 0, timestamp: Date.now() };
+    }
     try {
       const state = await this.bridge.send({ type: "GET_STATE" }) as {
         url?: string;
@@ -38,66 +41,69 @@ export class VerificationEngine {
   /** Verify an action by comparing before/after state. */
   async verify(params: {
     actionDescription: string;
-    beforeSnapshot: PageSnapshot;
+    beforeSnapshot?: PageSnapshot;
     expectedCondition?: string;
   }): Promise<VerificationResult> {
     const t0 = Date.now();
     const signals: VerificationSignal[] = [];
 
+    const before = params.beforeSnapshot ?? { url: "", title: "", elementCount: 0, timestamp: Date.now() };
+
     // Take post-action snapshot
     const after = await this.snapshot();
 
     // Signal 1: URL change
-    if (after.url !== params.beforeSnapshot.url) {
+    if (after.url !== before.url) {
       signals.push({
         type: "URL_CHANGE",
         indicatesSuccess: true,
-        description: `URL changed: ${params.beforeSnapshot.url} → ${after.url}`,
+        description: `URL changed: ${before.url} → ${after.url}`,
         confidence: 0.7,
       });
     }
 
     // Signal 2: Title change
-    if (after.title !== params.beforeSnapshot.title) {
+    if (after.title !== before.title) {
       signals.push({
         type: "TITLE_CHANGE",
         indicatesSuccess: true,
-        description: `Title changed: "${params.beforeSnapshot.title}" → "${after.title}"`,
+        description: `Title changed: "${before.title}" → "${after.title}"`,
         confidence: 0.6,
       });
     }
 
     // Signal 3: Element count change (DOM mutation)
-    const countDiff = Math.abs(after.elementCount - params.beforeSnapshot.elementCount);
+    const countDiff = Math.abs(after.elementCount - before.elementCount);
     if (countDiff > 0) {
       signals.push({
         type: "DOM_CHANGE",
         indicatesSuccess: true,
-        description: `Element count changed by ${countDiff} (${params.beforeSnapshot.elementCount} → ${after.elementCount})`,
+        description: `Element count changed by ${countDiff} (${before.elementCount} → ${after.elementCount})`,
         confidence: Math.min(0.5 + countDiff * 0.05, 0.8),
       });
     }
 
     // Signal 4: Graph delta (check for mutations)
-    try {
-      const delta = await this.bridge.send({ type: "GRAPH_DELTA" }) as unknown[];
-      if (delta && Array.isArray(delta) && delta.length > 0) {
-        signals.push({
-          type: "GRAPH_DELTA",
-          indicatesSuccess: true,
-          description: `${delta.length} graph mutations detected after action`,
-          confidence: 0.65,
-        });
+    if (this.bridge && this.bridge.connected) {
+      try {
+        const delta = await this.bridge.send({ type: "GRAPH_DELTA" }) as unknown[];
+        if (delta && Array.isArray(delta) && delta.length > 0) {
+          signals.push({
+            type: "GRAPH_DELTA",
+            indicatesSuccess: true,
+            description: `${delta.length} graph mutations detected after action`,
+            confidence: 0.65,
+          });
+        }
+      } catch {
+        // Graph delta not available — skip
       }
-    } catch {
-      // Graph delta not available — skip
-    }
 
-    // Signal 5: Check for confirmation/error messages in the page
-    try {
-      const state = await this.bridge.send({ type: "GET_STATE" }) as {
-        elements?: Array<{ text?: string; role?: string }>;
-      };
+      // Signal 5: Check for confirmation/error messages in the page
+      try {
+        const state = await this.bridge.send({ type: "GET_STATE" }) as {
+          elements?: Array<{ text?: string; role?: string }>;
+        };
       if (state?.elements) {
         for (const el of state.elements) {
           const text = (el.text || "").toLowerCase();
@@ -125,6 +131,7 @@ export class VerificationEngine {
       }
     } catch {
       // State not available — skip
+    }
     }
 
     // Determine overall status

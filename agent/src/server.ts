@@ -29,6 +29,7 @@ import { AuditLogger } from "./audit/logger.js";
 import { PromptInjectionDetector } from "./security/injection.js";
 import { TaskRunner } from "./controller/runner.js";
 import { ActionValidator } from "./action/validator.js";
+import { AutonomousLLMAgent } from "./llm/agent-loop.js";
 import type { ActionCategory, ActionProposal, ActionType } from "./types/action.js";
 import type { RiskLevel } from "./types/risk.js";
 import type { PolicyRule } from "./types/policy.js";
@@ -616,6 +617,14 @@ async function dispatchServerMethod(method: string, params: Record<string, unkno
       return { ok: true };
     }
 
+    // ── Run LLM Autonomous Agent Task ──────────────────────────────────────
+    case "browser_run_llm_task": {
+      const prompt = params.prompt as string;
+      const maxSteps = (params.maxSteps as number) ?? 10;
+      const llmAgent = new AutonomousLLMAgent(bridge);
+      return await llmAgent.runTask(prompt, maxSteps);
+    }
+
     default:
       throw new Error(`Unhandled server method: ${method}`);
   }
@@ -655,6 +664,8 @@ const server = http.createServer((req, res) => {
       extensionConnected: bridge.connected,
       mcpEnabled: true,
       mcpActiveSessions: mcpSessionManager.getActiveSessionCount(),
+      llmEnabled: process.env.LLM_ENABLED === "true",
+      llmProvider: process.env.LLM_PROVIDER || "mock",
       modules: {
         observation: true,
         risk: true,
@@ -666,6 +677,7 @@ const server = http.createServer((req, res) => {
         memory: true,
         audit: true,
         security: true,
+        llm: true,
       },
       pendingApprovals: approvalGateway.getPending().length,
       activeTask: memoryManager.activeTaskId ?? null,

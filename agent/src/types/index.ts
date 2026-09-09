@@ -14,3 +14,4 @@ export * from "./memory.js";
 export * from "./audit.js";
 export * from "./errors.js";
 export * from "./security.js";
+export * from "./llm.js";

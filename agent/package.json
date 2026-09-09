@@ -38,6 +38,7 @@
     "mcp": "node dist/mcp.js",
     "mcp:doctor": "node scripts/mcp-doctor.mjs",
     "sih:benchmark": "node scripts/sih-benchmark.mjs",
+    "test:llm": "node test-llm.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {

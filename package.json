@@ -18,7 +18,8 @@
     "setup": "npm install && npm run build && npm --prefix agent install && npm --prefix agent run build",
     "demo:record": "node bench/sih-recording.mjs",
     "sih:benchmark": "node agent/scripts/sih-benchmark.mjs",
-    "sih:demo": "node agent/scripts/sih-demo.mjs"
+    "sih:demo": "node agent/scripts/sih-demo.mjs",
+    "test:llm": "node agent/test-llm.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
